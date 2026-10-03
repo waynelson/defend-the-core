@@ -11,6 +11,7 @@ import { clearCore, coreEntity, coreHp, coreLocation, forgetCore, labelCore, pla
 import { buildDepot, depotSitesLoaded, restockDepot } from "./depot.js";
 import { control, coreLost, gameStatus, setPhase, startGame, waveBegin, waveCommit, waveGroup } from "./game.js";
 import { playerList, startPlayers } from "./players.js";
+import { startRain } from "./rewards.js";
 import { MOBS, MODULES, TARGETING } from "./roster.js";
 import { attackers, spawnCenter, spawnOne, spawnPoints, validateSpawn } from "./spawner.js";
 import { emit, overworld, pos, round, store } from "./util.js";
@@ -71,6 +72,10 @@ const handlers = {
   },
   players() {
     return { players: playerList() };
+  },
+  // Reward: items rain around the core. {count?, radius?, duration_s?, quality?: 1..3}
+  rain(msg) {
+    return startRain(msg);
   },
   // The roster, modules and ranges, for the plugin's validator.
   roster() {
