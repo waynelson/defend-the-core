@@ -10,11 +10,14 @@ import { getConfig, setConfig, damagedBlocks, startBreach } from "./breach.js";
 import { clearCore, coreEntity, coreHp, coreLocation, forgetCore, labelCore, placeCore } from "./core.js";
 import { buildDepot, depotSitesLoaded, restockDepot } from "./depot.js";
 import { control, coreLost, gameStatus, setPhase, startGame, waveBegin, waveCommit, waveGroup } from "./game.js";
+import { bountyOwner, defenseList, dmMine, dmPlace, startDefenses } from "./defenses.js";
+import { econ, grantCoins, payBounty, setEconomy, startEconomy } from "./economy.js";
 import { playerList, startPlayers } from "./players.js";
 import { startRain } from "./rewards.js";
+import { SHOP, priceOf, spawnVendor, startShop } from "./shop.js";
 import { MOBS, MODULES, TARGETING } from "./roster.js";
 import { attackers, spawnCenter, spawnOne, spawnPoints, validateSpawn } from "./spawner.js";
-import { emit, overworld, pos, round, store } from "./util.js";
+import { emit, overworld, pos, round, store, stored } from "./util.js";
 
 export const PROTOCOL = 1;
 
@@ -72,6 +75,37 @@ const handlers = {
   },
   players() {
     return { players: playerList() };
+  },
+  // Economy: {wave_base, wave_step, bounty_mult, shop_open, turret_limit,
+  // mine_limit, prices: {id: price|null}} changes settings; {} reads them.
+  economy(msg) {
+    const { msg_id: _id, v: _v, ...changes } = msg;
+    const config = Object.keys(changes).length ? setEconomy(changes) : econ();
+    return { ...config, shop: SHOP.map((s) => ({ id: s.id, label: s.label, price: priceOf(s, config) })) };
+  },
+  // Grant or take coins: {player, delta} or {all: true, delta}.
+  coins(msg) {
+    return grantCoins(msg);
+  },
+  // Put the Quartermaster back in the middle of the depot.
+  vendor() {
+    const depot = stored("dtc:depot", undefined);
+    if (!depot) throw new Error("no depot built");
+    spawnVendor({ x: depot.center.x + 0.5, y: depot.center.y + 1, z: depot.center.z + 0.5 });
+    return { at: depot.center };
+  },
+  defenses() {
+    return defenseList();
+  },
+  // DM gift: {type: arrow|flak|frost, x, y, z, owner?}
+  place_turret(msg) {
+    if (![msg.x, msg.y, msg.z].every(Number.isInteger)) throw new Error("x, y, z must be integers");
+    return dmPlace(msg);
+  },
+  // DM: lay a mine {type: blast|frost, x, y, z, owner?}
+  place_mine(msg) {
+    if (![msg.x, msg.y, msg.z].every(Number.isInteger)) throw new Error("x, y, z must be integers");
+    return dmMine(msg);
   },
   // Reward: items rain around the core. {count?, radius?, duration_s?, quality?: 1..3}
   rain(msg) {
@@ -283,6 +317,7 @@ world.afterEvents.entityDie.subscribe(
       emit("game_over", { result: "lost", by: src.damagingEntity?.typeId ?? src.cause });
     } else {
       emit("attacker_died", { mob: event.deadEntity.typeId, by: src.damagingEntity?.typeId ?? src.cause });
+      payBounty(event.deadEntity.typeId, bountyOwner(event.deadEntity, src.damagingEntity));
     }
   },
   { entityTypes: ["dm:core", ...Object.keys(MOBS)] }
@@ -292,5 +327,8 @@ world.afterEvents.worldLoad.subscribe(() => {
   startBreach();
   startGame();
   startPlayers();
+  startEconomy();
+  startShop();
+  startDefenses();
   emit("loaded", { protocol: PROTOCOL, core: coreLocation() ?? null, ...gameStatus() });
 });

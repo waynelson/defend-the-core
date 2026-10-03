@@ -40,6 +40,29 @@ Modules are set per spawn group, so any mob can carry any module.
 Flyers ignore walls; their answer is cover (a roof) and players shooting back.
 Ghast blasts and dm:fireball explosions never destroy the core's own block.
 
+### Coins, the Quartermaster and defenses
+
+Players earn coins (a `coins` scoreboard, shown in the sidebar): everyone
+online gets `wave_base + wave_step × wave` when a wave is cleared, and the
+player who lands a killing blow (or owns the turret or mine that did) gets a
+bounty per mob. The **Quartermaster** NPC stands in the middle of the depot;
+talking to it opens the shop.
+
+| Shop item | Price | What it is |
+| --- | --- | --- |
+| Arrow Turret | 150 | Shoots 2-arrow bursts at attackers within 16 blocks |
+| Flak Turret | 200 | 3-arrow bursts at flyers only, 32 blocks |
+| Frost Turret | 120 | Snowballs that slow attackers |
+| Blast Mine | 40 | Pressure plate; explodes when an attacker comes near (no block damage) |
+| Frost Mine | 30 | Pressure plate; slows and webs attackers |
+| Arrows ×32, Golden Apple, Iron Blocks ×8, Core Repair +25 HP | 15–100 | Supplies |
+
+Use a turret or mine item on a block to place it. Turrets belong to whoever
+placed them (3 each by default), can't be hurt by players, never hurt
+players, and attackers within 8 blocks fight them. Mines arm 3 seconds after
+placing. Prices, payouts, limits and the shop's open/closed state are
+DM settings (`dm:economy`).
+
 ### Players and chat
 
 The add-on reports who is online every 5 seconds (health, position, distance
@@ -86,6 +109,11 @@ Crafty's remote console).
 | `depot_restock` | `{}` | Refill every depot barrel with its kit. |
 | `probe` | `{"every":20}` / `{"on":false}` | Log attacker positions and distance to the core. |
 | `players` | `{}` | Everyone online, as in the `players` reports. |
+| `economy` | `{"wave_base":50,"shop_open":false,"prices":{"arrow_turret":120}}` | Read (`{}`) or change economy settings and prices. |
+| `coins` | `{"player":"Steve","delta":100}` or `{"all":true,"delta":50}` | Grant or take coins. |
+| `vendor` | `{}` | Put the Quartermaster back in the middle of the depot. |
+| `defenses` | `{}` | Everyone's turrets and mines. |
+| `place_turret`, `place_mine` | `{"type":"arrow","x":..,"y":..,"z":..,"owner"?}` | DM gift: place a turret (arrow, flak, frost) or mine (blast, frost). |
 | `rain` | `{"count":12,"radius":12,"duration_s":6,"quality":2}` | Reward: key survival items fall from the sky at random spots around the core (quality 1 basic, 2 good, 3 great). |
 | `status`, `roster`, `ping` | `{}` | Full game state / mobs and module ranges / connectivity check. |
 

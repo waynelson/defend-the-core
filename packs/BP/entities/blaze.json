@@ -12,6 +12,7 @@
         "family": [
           "dm_attacker",
           "blaze",
+          "dm_flyer",
           "monster",
           "mob"
         ]
@@ -145,11 +146,21 @@
               "filters": {
                 "test": "is_family",
                 "subject": "other",
+                "value": "dm_turret"
+              },
+              "max_dist": 8,
+              "must_see": true,
+              "priority": 1
+            },
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
                 "value": "player"
               },
               "max_dist": 6,
               "must_see": true,
-              "priority": 1
+              "priority": 2
             }
           ]
         }
@@ -170,6 +181,15 @@
               },
               "max_dist": 64,
               "must_see": false
+            },
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "dm_turret"
+              },
+              "max_dist": 8,
+              "must_see": true
             },
             {
               "filters": {

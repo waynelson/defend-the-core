@@ -1,0 +1,109 @@
+{
+  "format_version": "1.26.50",
+  "minecraft:entity": {
+    "description": {
+      "identifier": "dm:turret_frost",
+      "is_summonable": true,
+      "is_spawnable": false
+    },
+    "components": {
+      "minecraft:type_family": {
+        "family": [
+          "dm_turret",
+          "inanimate"
+        ]
+      },
+      "minecraft:health": {
+        "value": 30,
+        "max": 30
+      },
+      "minecraft:collision_box": {
+        "width": 1.0,
+        "height": 1.0
+      },
+      "minecraft:physics": {},
+      "minecraft:knockback_resistance": {
+        "value": 1.0
+      },
+      "minecraft:movement": {
+        "value": 0
+      },
+      "minecraft:movement.basic": {},
+      "minecraft:navigation.walk": {},
+      "minecraft:persistent": {},
+      "minecraft:nameable": {
+        "always_show": false,
+        "allow_name_tag_renaming": false
+      },
+      "minecraft:fire_immune": {},
+      "minecraft:damage_sensor": {
+        "triggers": [
+          {
+            "on_damage": {
+              "filters": {
+                "any_of": [
+                  {
+                    "test": "is_family",
+                    "subject": "other",
+                    "value": "player"
+                  },
+                  {
+                    "test": "is_family",
+                    "subject": "damager",
+                    "value": "player"
+                  },
+                  {
+                    "test": "is_family",
+                    "subject": "other",
+                    "value": "dm_turret"
+                  },
+                  {
+                    "test": "is_family",
+                    "subject": "damager",
+                    "value": "dm_turret"
+                  }
+                ]
+              }
+            },
+            "deals_damage": "no"
+          },
+          {
+            "deals_damage": "yes"
+          }
+        ]
+      },
+      "minecraft:behavior.nearest_attackable_target": {
+        "priority": 1,
+        "must_see": true,
+        "reselect_targets": true,
+        "within_radius": 14,
+        "target_search_height": 64,
+        "entity_types": [
+          {
+            "filters": {
+              "test": "is_family",
+              "subject": "other",
+              "value": "dm_attacker"
+            },
+            "max_dist": 14,
+            "must_see": true
+          }
+        ]
+      },
+      "minecraft:behavior.ranged_attack": {
+        "priority": 0,
+        "attack_interval": {
+          "min": 1.0,
+          "max": 1.0
+        },
+        "attack_range": {
+          "min": 0.0,
+          "max": 14.0
+        }
+      },
+      "minecraft:shooter": {
+        "def": "minecraft:snowball"
+      }
+    }
+  }
+}

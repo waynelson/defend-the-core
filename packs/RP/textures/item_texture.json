@@ -1,0 +1,21 @@
+{
+  "resource_pack_name": "defend_the_core",
+  "texture_name": "atlas.items",
+  "texture_data": {
+    "dm_arrow_turret": {
+      "textures": "textures/items/shulker_shell"
+    },
+    "dm_flak_turret": {
+      "textures": "textures/items/shulker_shell"
+    },
+    "dm_frost_turret": {
+      "textures": "textures/items/snowball"
+    },
+    "dm_blast_mine": {
+      "textures": "textures/blocks/tnt_side"
+    },
+    "dm_frost_mine": {
+      "textures": "textures/blocks/ice"
+    }
+  }
+}

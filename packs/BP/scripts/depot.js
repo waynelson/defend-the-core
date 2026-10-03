@@ -5,6 +5,7 @@
 
 import { BlockPermutation, BlockVolume, EnchantmentType, ItemStack, SignSide, world } from "@minecraft/server";
 import { COLUMNS, KITS } from "./kits.js";
+import { spawnVendor } from "./shop.js";
 
 const DEPOT_PROP = "dtc:depot"; // JSON {center, facing, chests: [{x, y, z, kit}]}
 const HALF = 7; // the site is (2 * HALF + 1) blocks square
@@ -236,6 +237,12 @@ function buildPavilion(b) {
 
 const BARREL_FACING = { down: 0, up: 1, north: 2, south: 3, west: 4, east: 5 };
 
+/** The Quartermaster stands on the depot's chiseled centre. */
+function placeVendor(b) {
+  const at = b.at(0, 1, 0);
+  spawnVendor({ x: at.x + 0.5, y: at.y, z: at.z + 0.5 });
+}
+
 function buildChests(b) {
   const chests = [];
   CHEST_SPOTS.forEach(([x, z, face], i) => {
@@ -377,6 +384,7 @@ export function buildDepot(core, msg) {
     if (!existing) throw new Error("no depot built");
     const b = new Builder(dim, existing.center, existing.facing);
     const chests = buildChests(b);
+    placeVendor(b);
     world.setDynamicProperty(DEPOT_PROP, JSON.stringify({ ...existing, chests }));
     const stock = restockDepot();
     return {
@@ -401,6 +409,7 @@ export function buildDepot(core, msg) {
   const b = new Builder(dim, { x: site.x, y: site.y, z: site.z }, facing);
   buildPavilion(b);
   const chests = buildChests(b);
+  placeVendor(b);
   const path = msg.path === false ? 0 : buildPath(b, core);
   world.setDynamicProperty(DEPOT_PROP, JSON.stringify({ center: b.center, facing, chests }));
   const stock = restockDepot();

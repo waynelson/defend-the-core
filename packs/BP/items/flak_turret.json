@@ -1,0 +1,18 @@
+{
+  "format_version": "1.26.50",
+  "minecraft:item": {
+    "description": {
+      "identifier": "dm:flak_turret",
+      "menu_category": {
+        "category": "equipment"
+      }
+    },
+    "components": {
+      "minecraft:icon": "dm_flak_turret",
+      "minecraft:display_name": {
+        "value": "Flak Turret"
+      },
+      "minecraft:max_stack_size": 16
+    }
+  }
+}

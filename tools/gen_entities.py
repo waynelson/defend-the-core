@@ -50,15 +50,15 @@ ROSTER = {
     # Flyers: no breach modules; they bypass walls and attack from the air.
     "ghast": {
         "base": "ghast", "name": "Siege Ghast", "health": 20, "speed": 0.06,
-        "families": ["ghast"], "template": "ghast", "runtime": True, "targeting": "core_only",
+        "families": ["ghast", "dm_flyer"], "template": "ghast", "runtime": True, "targeting": "core_only",
     },
     "blaze": {
         "base": "blaze", "name": "Blaze", "health": 20, "speed": 0.23,
-        "families": ["blaze"], "template": "blaze", "runtime": True,
+        "families": ["blaze", "dm_flyer"], "template": "blaze", "runtime": True,
     },
     "phantom": {
         "base": "phantom", "name": "Phantom", "health": 20, "speed": 1.8, "attack": 6,
-        "families": ["phantom", "undead"], "template": "phantom",
+        "families": ["phantom", "undead", "dm_flyer"], "template": "phantom",
     },
 }
 FLYERS = ("ghast", "blaze", "phantom")
@@ -100,7 +100,9 @@ def targeting_groups(flyer=False):
                 **common,
                 "entity_types": [
                     target_entry("dm_core", 64, False, 0),
-                    target_entry("player", 6, True, 1),
+                    # Turrets close by are fair game (players can lose them).
+                    target_entry("dm_turret", 8, True, 1),
+                    target_entry("player", 6, True, 2),
                 ],
             }
         },
@@ -108,7 +110,11 @@ def targeting_groups(flyer=False):
         "dm:tgt_nearest": {
             "minecraft:behavior.nearest_attackable_target": {
                 **common,
-                "entity_types": [target_entry("dm_core", 64, False), target_entry("player", 6, True)],
+                "entity_types": [
+                    target_entry("dm_core", 64, False),
+                    target_entry("dm_turret", 8, True),
+                    target_entry("player", 6, True),
+                ],
             }
         },
     }
@@ -368,6 +374,7 @@ def main():
     for name, mob in ROSTER.items():
         write(BP / f"{name}.json", behavior(name, mob))
         write(RP / f"{name}.entity.json", client(name, mob))
+    write_defenses()
     lang = ROOT / "packs/RP/texts/en_US.lang"
     lines = [
         "pack.name=Defend the Core Resources",
@@ -377,8 +384,178 @@ def main():
     for name, mob in ROSTER.items():
         lines.append(f"entity.dm:{name}.name={mob['name']}")
         lines.append(f"item.spawn_egg.entity.dm:{name}.name=Spawn {mob['name']}")
+    for name, turret in TURRETS.items():
+        lines.append(f"entity.dm:{name}.name={turret['name']}")
+    lines.append("entity.dm:vendor.name=Quartermaster")
+    for item_id, item in ITEMS.items():
+        lines.append(f"item.dm:{item_id}={item['name']}")
     lang.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"wrote {len(ROSTER)} mobs; {GEN_NOTE}")
+
+
+# ---------------------------------------------------------------- defenses
+
+# Stationary turrets players buy and place. They target attackers only (the
+# flak turret only flyers), can't be hurt by players, and attackers that
+# come within 8 blocks fight them.
+TURRETS = {
+    "turret_arrow": {
+        "name": "Arrow Turret", "health": 40, "range": 16, "interval": (1.5, 2.0), "burst": 2,
+        "shoots": "minecraft:arrow", "targets": "dm_attacker", "template": "shulker",
+    },
+    "turret_flak": {
+        # Phantoms are quick; a burst gives it a fair chance (tested: single
+        # shots kept missing).
+        "name": "Flak Turret", "health": 40, "range": 32, "interval": (1.0, 1.5), "burst": 3,
+        "shoots": "minecraft:arrow", "targets": "dm_flyer", "template": "shulker",
+    },
+    "turret_frost": {
+        "name": "Frost Turret", "health": 30, "range": 14, "interval": (1.0, 1.0),
+        # Snowballs don't hurt; the script slows whatever they hit.
+        "shoots": "minecraft:snowball", "targets": "dm_attacker", "template": "snow_golem",
+    },
+}
+
+# Placeable defense items (used on a block; scripts/defenses.js does the
+# placing) and the vanilla textures their icons borrow.
+ITEMS = {
+    "arrow_turret": {"name": "Arrow Turret", "icon": "textures/items/shulker_shell"},
+    "flak_turret": {"name": "Flak Turret", "icon": "textures/items/shulker_shell"},
+    "frost_turret": {"name": "Frost Turret", "icon": "textures/items/snowball"},
+    "blast_mine": {"name": "Blast Mine", "icon": "textures/blocks/tnt_side"},
+    "frost_mine": {"name": "Frost Mine", "icon": "textures/blocks/ice"},
+}
+
+# Players can't hurt defenses or the vendor; turrets don't hurt each other.
+NO_PLAYER_DAMAGE = {
+    "any_of": [
+        {"test": "is_family", "subject": "other", "value": "player"},
+        {"test": "is_family", "subject": "damager", "value": "player"},
+        {"test": "is_family", "subject": "other", "value": "dm_turret"},
+        {"test": "is_family", "subject": "damager", "value": "dm_turret"},
+    ]
+}
+
+
+def turret(name, spec):
+    reach = spec["range"]
+    return {
+        "format_version": "1.26.50",
+        "minecraft:entity": {
+            "description": {"identifier": f"dm:{name}", "is_summonable": True, "is_spawnable": False},
+            "components": {
+                "minecraft:type_family": {"family": ["dm_turret", "inanimate"]},
+                "minecraft:health": {"value": spec["health"], "max": spec["health"]},
+                "minecraft:collision_box": {"width": 1.0, "height": 1.0},
+                "minecraft:physics": {},
+                "minecraft:knockback_resistance": {"value": 1.0},
+                # Stands still: no speed, but ranged attacks expect movement parts.
+                "minecraft:movement": {"value": 0},
+                "minecraft:movement.basic": {},
+                "minecraft:navigation.walk": {},
+                "minecraft:persistent": {},
+                "minecraft:nameable": {"always_show": False, "allow_name_tag_renaming": False},
+                "minecraft:fire_immune": {},
+                "minecraft:damage_sensor": {
+                    "triggers": [
+                        {"on_damage": {"filters": NO_PLAYER_DAMAGE}, "deals_damage": "no"},
+                        {"deals_damage": "yes"},
+                    ]
+                },
+                "minecraft:behavior.nearest_attackable_target": {
+                    "priority": 1,
+                    "must_see": True,
+                    "reselect_targets": True,
+                    "within_radius": reach,
+                    "target_search_height": 64,
+                    "entity_types": [target_entry(spec["targets"], reach, True)],
+                },
+                "minecraft:behavior.ranged_attack": {
+                    "priority": 0,
+                    "attack_interval": {"min": spec["interval"][0], "max": spec["interval"][1]},
+                    "attack_range": {"min": 0.0, "max": float(reach)},
+                    **({"burst_shots": spec["burst"], "burst_interval": 0.2} if spec.get("burst") else {}),
+                },
+                "minecraft:shooter": {"def": spec["shoots"]},
+            },
+        },
+    }
+
+
+def vendor():
+    return {
+        "format_version": "1.26.50",
+        "minecraft:entity": {
+            "description": {"identifier": "dm:vendor", "is_summonable": True, "is_spawnable": False},
+            "components": {
+                "minecraft:type_family": {"family": ["dm_vendor", "npc"]},
+                "minecraft:health": {"value": 20, "max": 20},
+                "minecraft:collision_box": {"width": 0.6, "height": 1.9},
+                "minecraft:physics": {},
+                "minecraft:knockback_resistance": {"value": 1.0},
+                "minecraft:persistent": {},
+                "minecraft:nameable": {"always_show": True, "allow_name_tag_renaming": False},
+                "minecraft:damage_sensor": {"triggers": [{"deals_damage": "no"}]},
+                "minecraft:behavior.look_at_player": {"priority": 1, "look_distance": 8},
+                # Talking opens the shop (scripts/shop.js listens for the interaction).
+                "minecraft:interact": {
+                    "interactions": [
+                        {
+                            "on_interact": {
+                                "filters": {"test": "is_family", "subject": "other", "value": "player"},
+                                "event": "dm:talk",
+                                "target": "self",
+                            },
+                            "interact_text": "action.interact.trade",
+                        }
+                    ]
+                },
+            },
+            "events": {"dm:talk": {}},
+        },
+    }
+
+
+def item(item_id, spec):
+    return {
+        "format_version": "1.26.50",
+        "minecraft:item": {
+            "description": {"identifier": f"dm:{item_id}", "menu_category": {"category": "equipment"}},
+            "components": {
+                "minecraft:icon": f"dm_{item_id}",
+                "minecraft:display_name": {"value": spec["name"]},
+                "minecraft:max_stack_size": 16,
+            },
+        },
+    }
+
+
+def renamed_template(template, ident):
+    data = json.loads((ROOT / f"tools/templates/{template}.entity.json").read_text(encoding="utf-8"))
+    data["minecraft:client_entity"]["description"]["identifier"] = ident
+    return data
+
+
+def write_defenses():
+    for name, spec in TURRETS.items():
+        write(BP / f"{name}.json", turret(name, spec))
+        write(RP / f"{name}.entity.json", renamed_template(spec["template"], f"dm:{name}"))
+    write(BP / "vendor.json", vendor())
+    write(RP / "vendor.entity.json", renamed_template("wandering_trader", "dm:vendor"))
+    items = ROOT / "packs/BP/items"
+    items.mkdir(exist_ok=True)
+    for item_id, spec in ITEMS.items():
+        write(items / f"{item_id}.json", item(item_id, spec))
+    textures = ROOT / "packs/RP/textures"
+    textures.mkdir(exist_ok=True)
+    write(
+        textures / "item_texture.json",
+        {
+            "resource_pack_name": "defend_the_core",
+            "texture_name": "atlas.items",
+            "texture_data": {f"dm_{i}": {"textures": s["icon"]} for i, s in ITEMS.items()},
+        },
+    )
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@
 import { system, world } from "@minecraft/server";
 import { coreHp } from "./core.js";
 import { attackers, spawnCenter, spawnOne, validateSpawn } from "./spawner.js";
+import { payWave } from "./economy.js";
 import { emit, store, stored } from "./util.js";
 
 const GAME_PROP = "dtc:game";
@@ -193,6 +194,7 @@ function checkWaveDone() {
   if (waveMobs().length) return;
   wave.done = true;
   emit("wave_cleared", { ...waveProgress() });
+  payWave(game.wave_no);
   if (wave.final) {
     setPhase("won");
     emit("game_over", { result: "won" });
