@@ -10,6 +10,7 @@ import { getConfig, setConfig, damagedBlocks, startBreach } from "./breach.js";
 import { clearCore, coreEntity, coreHp, coreLocation, forgetCore, labelCore, placeCore } from "./core.js";
 import { buildDepot, depotSitesLoaded, restockDepot } from "./depot.js";
 import { control, coreLost, gameStatus, setPhase, startGame, waveBegin, waveCommit, waveGroup } from "./game.js";
+import { playerList, startPlayers } from "./players.js";
 import { MOBS, MODULES, TARGETING } from "./roster.js";
 import { attackers, spawnCenter, spawnOne, spawnPoints, validateSpawn } from "./spawner.js";
 import { emit, overworld, pos, round, store } from "./util.js";
@@ -67,6 +68,9 @@ const handlers = {
       points: spawnPoints(),
       ...gameStatus(),
     };
+  },
+  players() {
+    return { players: playerList() };
   },
   // The roster, modules and ranges, for the plugin's validator.
   roster() {
@@ -282,5 +286,6 @@ world.afterEvents.entityDie.subscribe(
 world.afterEvents.worldLoad.subscribe(() => {
   startBreach();
   startGame();
+  startPlayers();
   emit("loaded", { protocol: PROTOCOL, core: coreLocation() ?? null, ...gameStatus() });
 });

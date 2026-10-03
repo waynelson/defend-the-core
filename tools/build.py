@@ -16,7 +16,12 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PACKS = {"BP": "defend_the_core_BP", "RP": "defend_the_core_RP"}
+PACKS = {
+    "BP": "defend_the_core_BP",
+    "RP": "defend_the_core_RP",
+    # Optional chat relay; needs the world's Beta APIs experiment (README).
+    "chat": "defend_the_core_chat",
+}
 DIST = ROOT / "dist"
 COUNTER = DIST / ".build"
 DEV_PATCH_BASE = 1000

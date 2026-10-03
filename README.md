@@ -35,6 +35,20 @@ mechanics and waves come next.
 
 Modules are set per spawn group, so any mob can carry any module.
 
+### Players and chat
+
+The add-on reports who is online every 5 seconds (health, position, distance
+to the core, game mode, dimension, biome) and on join, leave, death and game
+mode changes; `dm:players` asks for the list.
+
+Chat is relayed by a separate pack, **Defend the Core Chat Bridge**
+(`packs/chat`), because chat events are only in the beta Script API. It needs
+the world's **Beta APIs** experiment; BDS can't toggle that, so
+`tools/experiments.py --enable` stops the server, edits `level.dat` (with
+backups) and starts it again. Players don't need to do anything. The bridge
+is pinned to the beta API of one BDS release, so a BDS update can stop it
+until it is rebuilt; only chat relay is affected.
+
 ## DM commands
 
 The DM tab in the Crafty fork drives all of this. By hand,
@@ -66,6 +80,7 @@ Crafty's remote console).
 | `depot` | `{"dist":50}` or `{"x":..,"z":..,"y"?}` | Build the supply depot on the flattest spot at `dist` from the core, or at x/z. Run again to rebuild in place; add `"relocate":true` to move it. |
 | `depot_restock` | `{}` | Refill every depot chest with its kit. |
 | `probe` | `{"every":20}` / `{"on":false}` | Log attacker positions and distance to the core. |
+| `players` | `{}` | Everyone online, as in the `players` reports. |
 | `status`, `roster`, `ping` | `{}` | Full game state / mobs and module ranges / connectivity check. |
 
 Starter kits are defined in [packs/BP/scripts/kits.js](packs/BP/scripts/kits.js).
@@ -79,6 +94,7 @@ tools/gen_entities.py  generate the attacker entity files from one roster
 tools/build.py     zip both packs into dist/ (--release: tagged version)
 tools/deploy.py    build and install on a Crafty-managed server via its addon API
 tools/dm.py        send dm:* commands through Crafty and print the [DM] replies
+tools/experiments.py  enable the Beta APIs experiment in a server's world (for the chat bridge)
 docs/M0.md         spike results
 ```
 
