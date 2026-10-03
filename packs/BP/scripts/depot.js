@@ -379,7 +379,13 @@ export function buildDepot(core, msg) {
     const chests = buildChests(b);
     world.setDynamicProperty(DEPOT_PROP, JSON.stringify({ ...existing, chests }));
     const stock = restockDepot();
-    return { center: existing.center, containers_only: true, ...stock, errors: [...b.errors, ...stock.errors] };
+    return {
+      center: existing.center,
+      entrance: b.at(0, 1, HALF + 1),
+      containers_only: true,
+      ...stock,
+      errors: [...b.errors, ...stock.errors],
+    };
   }
   const explicit = Number.isInteger(msg.x) && Number.isInteger(msg.z);
   const moving =
