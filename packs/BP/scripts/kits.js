@@ -1,0 +1,177 @@
+// Starter kits for the supply depot, one per chest.
+//
+// Item entries are [id, count, enchantments?]. Counts above an item's stack
+// size spill into more slots. Potions use [id, count, {potion: data}] because
+// stable script APIs can't make potions; they go in by `replaceitem`.
+
+const POTION = {
+  fire_resistance: 12,
+  swiftness: 14,
+  healing: 21,
+  strong_healing: 22,
+  regeneration: 28,
+  strength: 31,
+};
+
+/** @type {{id: string, label: string, items: [string, number, Record<string, number>?][]}[]} */
+export const KITS = [
+  {
+    id: "weapons",
+    label: "Weapons",
+    items: [
+      ["minecraft:diamond_sword", 1, { sharpness: 3, unbreaking: 2 }],
+      ["minecraft:iron_sword", 3, { sharpness: 2 }],
+      ["minecraft:iron_axe", 2, { sharpness: 1 }],
+      ["minecraft:bow", 3, { power: 2, unbreaking: 1 }],
+      ["minecraft:crossbow", 2, { quick_charge: 2 }],
+      ["minecraft:shield", 3],
+    ],
+  },
+  {
+    id: "ammo",
+    label: "Ammo",
+    items: [
+      ["minecraft:arrow", 64 * 8],
+      ["minecraft:snowball", 64],
+      ["minecraft:fire_charge", 32],
+    ],
+  },
+  {
+    id: "armor",
+    label: "Armor",
+    items: [
+      ["minecraft:diamond_helmet", 1, { protection: 2 }],
+      ["minecraft:diamond_chestplate", 1, { protection: 2 }],
+      ["minecraft:diamond_leggings", 1, { protection: 2 }],
+      ["minecraft:diamond_boots", 1, { protection: 2, feather_falling: 2 }],
+      ["minecraft:iron_helmet", 3, { protection: 1 }],
+      ["minecraft:iron_chestplate", 3, { protection: 1 }],
+      ["minecraft:iron_leggings", 3, { protection: 1 }],
+      ["minecraft:iron_boots", 3, { protection: 1 }],
+    ],
+  },
+  {
+    id: "tools",
+    label: "Tools",
+    items: [
+      ["minecraft:diamond_pickaxe", 1, { efficiency: 3, unbreaking: 2 }],
+      ["minecraft:iron_pickaxe", 3, { efficiency: 2 }],
+      ["minecraft:iron_axe", 2, { efficiency: 2 }],
+      ["minecraft:iron_shovel", 2, { efficiency: 2 }],
+      ["minecraft:iron_hoe", 1],
+      ["minecraft:shears", 1],
+      ["minecraft:flint_and_steel", 1],
+    ],
+  },
+  {
+    id: "building",
+    label: "Building",
+    items: [
+      ["minecraft:stone_bricks", 64 * 4],
+      ["minecraft:cobblestone", 64 * 4],
+      ["minecraft:oak_planks", 64 * 3],
+      ["minecraft:glass", 64],
+      ["minecraft:stone_brick_slab", 64],
+      ["minecraft:stone_brick_stairs", 64],
+      ["minecraft:oak_fence", 64],
+      ["minecraft:fence_gate", 8],
+      ["minecraft:wooden_door", 4],
+      ["minecraft:iron_door", 2],
+    ],
+  },
+  {
+    id: "fortify",
+    label: "Fortify",
+    items: [
+      ["minecraft:obsidian", 64],
+      ["minecraft:iron_block", 32],
+      ["minecraft:deepslate_bricks", 64 * 3],
+      ["minecraft:polished_blackstone_bricks", 64 * 3],
+      ["minecraft:iron_bars", 64],
+      ["minecraft:iron_trapdoor", 16],
+      ["minecraft:web", 32],
+    ],
+  },
+  {
+    id: "redstone",
+    label: "Redstone",
+    items: [
+      ["minecraft:redstone", 64 * 2],
+      ["minecraft:redstone_torch", 32],
+      ["minecraft:repeater", 32],
+      ["minecraft:comparator", 16],
+      ["minecraft:piston", 16],
+      ["minecraft:sticky_piston", 16],
+      ["minecraft:observer", 16],
+      ["minecraft:dispenser", 16],
+      ["minecraft:hopper", 8],
+      ["minecraft:lever", 16],
+      ["minecraft:stone_button", 16],
+      ["minecraft:stone_pressure_plate", 16],
+      ["minecraft:tripwire_hook", 16],
+      ["minecraft:string", 64],
+      ["minecraft:redstone_block", 16],
+      ["minecraft:slime", 16],
+      ["minecraft:tnt", 16],
+    ],
+  },
+  {
+    id: "food",
+    label: "Food",
+    items: [
+      ["minecraft:cooked_beef", 64 * 2],
+      ["minecraft:bread", 64],
+      ["minecraft:baked_potato", 64],
+      ["minecraft:golden_carrot", 32],
+      ["minecraft:golden_apple", 8],
+      ["minecraft:cake", 1],
+    ],
+  },
+  {
+    id: "potions",
+    label: "Potions",
+    items: [
+      ["minecraft:potion", 6, { potion: POTION.healing }],
+      ["minecraft:potion", 3, { potion: POTION.strong_healing }],
+      ["minecraft:potion", 4, { potion: POTION.regeneration }],
+      ["minecraft:potion", 4, { potion: POTION.swiftness }],
+      ["minecraft:potion", 4, { potion: POTION.strength }],
+      ["minecraft:potion", 2, { potion: POTION.fire_resistance }],
+      ["minecraft:splash_potion", 6, { potion: POTION.healing }],
+      ["minecraft:milk_bucket", 2],
+    ],
+  },
+  {
+    id: "utility",
+    label: "Utility",
+    items: [
+      ["minecraft:torch", 64 * 2],
+      ["minecraft:lantern", 16],
+      ["minecraft:ladder", 64],
+      ["minecraft:scaffolding", 64],
+      ["minecraft:water_bucket", 2],
+      ["minecraft:bucket", 2],
+      ["minecraft:crafting_table", 2],
+      ["minecraft:furnace", 2],
+      ["minecraft:coal", 64],
+      ["minecraft:chest", 8],
+      ["minecraft:bed", 4],
+      ["minecraft:ender_pearl", 16],
+      ["minecraft:compass", 1],
+      ["minecraft:clock", 1],
+    ],
+  },
+  {
+    id: "enchanting",
+    label: "Enchanting",
+    items: [
+      ["minecraft:enchanting_table", 1],
+      ["minecraft:bookshelf", 15],
+      ["minecraft:lapis_lazuli", 64],
+      ["minecraft:experience_bottle", 64 * 2],
+      ["minecraft:anvil", 1],
+      ["minecraft:grindstone", 1],
+      ["minecraft:book", 16],
+    ],
+  },
+];

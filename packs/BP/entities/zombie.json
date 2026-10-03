@@ -1,0 +1,100 @@
+{
+  // Trimmed clone of the 1.26.50 vanilla zombie (no babies, jockeys, drowning,
+  // daylight burning, item pickup or despawning). Targeting is swapped between
+  // three setups by event so M0 can compare them on one entity.
+  "format_version": "1.26.50",
+  "minecraft:entity": {
+    "description": {
+      "identifier": "dm:zombie",
+      "is_summonable": true,
+      "is_spawnable": true
+    },
+    "components": {
+      "minecraft:type_family": { "family": ["dm_attacker", "zombie", "undead", "monster", "mob"] },
+      "minecraft:health": { "value": 20, "max": 20 },
+      "minecraft:attack": { "damage": 3 },
+      "minecraft:movement": { "value": 0.23 },
+      "minecraft:follow_range": { "value": 64, "max": 64 },
+      "minecraft:collision_box": { "width": 0.6, "height": 1.9 },
+      // Retaliate against players and others, never against fellow attackers
+      // (stray arrows otherwise start infighting).
+      "minecraft:behavior.hurt_by_target": {
+        "priority": 1,
+        "entity_types": [{ "filters": { "test": "is_family", "subject": "other", "operator": "!=", "value": "dm_attacker" } }]
+      },
+      "minecraft:behavior.melee_box_attack": { "priority": 4, "track_target": true },
+      "minecraft:behavior.random_stroll": { "priority": 7, "speed_multiplier": 1 },
+      "minecraft:behavior.look_at_player": { "priority": 8, "look_distance": 6 },
+      "minecraft:behavior.random_look_around": { "priority": 9 },
+      "minecraft:breathable": { "total_supply": 15, "suffocate_time": 0, "breathes_air": true, "breathes_water": true },
+      "minecraft:can_climb": {},
+      "minecraft:jump.static": {},
+      "minecraft:movement.basic": {},
+      "minecraft:navigation.walk": { "can_walk": true, "is_amphibious": true, "can_pass_doors": true, "can_break_doors": false },
+      "minecraft:physics": {},
+      "minecraft:pushable_by_entity": {},
+      "minecraft:pushable_by_block": {},
+      "minecraft:nameable": {},
+      "minecraft:persistent": {},
+      "minecraft:conditional_bandwidth_optimization": {},
+      "minecraft:hurt_on_condition": {
+        "damage_conditions": [{ "cause": "lava", "damage_per_tick": 4, "filters": { "test": "in_lava" } }]
+      }
+    },
+    "component_groups": {
+      // Core only; ignores players unless hurt by one.
+      "dm:tgt_core_only": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 64,
+          "entity_types": [
+            { "filters": { "test": "is_family", "subject": "other", "value": "dm_core" }, "max_dist": 64, "must_see": false }
+          ]
+        }
+      },
+      // One goal, per-type priority: core first, players inside the aggro radius second.
+      "dm:tgt_prioritized": {
+        "minecraft:behavior.nearest_prioritized_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 64,
+          "entity_types": [
+            { "filters": { "test": "is_family", "subject": "other", "value": "dm_core" }, "max_dist": 64, "must_see": false, "priority": 0 },
+            { "filters": { "test": "is_family", "subject": "other", "value": "player" }, "max_dist": 6, "must_see": true, "priority": 1 }
+          ]
+        }
+      },
+      // Vanilla style: whichever valid target is nearest.
+      "dm:tgt_nearest": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 64,
+          "entity_types": [
+            { "filters": { "test": "is_family", "subject": "other", "value": "dm_core" }, "max_dist": 64, "must_see": false },
+            { "filters": { "test": "is_family", "subject": "other", "value": "player" }, "max_dist": 6, "must_see": true }
+          ]
+        }
+      }
+    },
+    "events": {
+      "minecraft:entity_spawned": { "add": { "component_groups": ["dm:tgt_prioritized"] } },
+      "dm:tgt_core_only": {
+        "remove": { "component_groups": ["dm:tgt_prioritized", "dm:tgt_nearest"] },
+        "add": { "component_groups": ["dm:tgt_core_only"] }
+      },
+      "dm:tgt_prioritized": {
+        "remove": { "component_groups": ["dm:tgt_core_only", "dm:tgt_nearest"] },
+        "add": { "component_groups": ["dm:tgt_prioritized"] }
+      },
+      "dm:tgt_nearest": {
+        "remove": { "component_groups": ["dm:tgt_core_only", "dm:tgt_prioritized"] },
+        "add": { "component_groups": ["dm:tgt_nearest"] }
+      }
+    }
+  }
+}

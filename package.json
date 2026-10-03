@@ -1,0 +1,15 @@
+{
+  "name": "defend-the-core",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Defend the Core: Bedrock add-on for DM-driven tower defense",
+  "scripts": {
+    "check": "tsc -p jsconfig.json",
+    "build": "python tools/build.py",
+    "deploy": "python tools/deploy.py"
+  },
+  "devDependencies": {
+    "@minecraft/server": "2.10.0",
+    "typescript": "^5.6.0"
+  }
+}

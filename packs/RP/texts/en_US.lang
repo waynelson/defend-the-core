@@ -1,0 +1,7 @@
+pack.name=Defend the Core Resources
+pack.description=Client entities for Defend the Core
+entity.dm:core.name=Core
+entity.dm:zombie.name=Siege Zombie
+entity.dm:skeleton.name=Siege Skeleton
+item.spawn_egg.entity.dm:zombie.name=Spawn Siege Zombie
+item.spawn_egg.entity.dm:skeleton.name=Spawn Siege Skeleton
