@@ -20,7 +20,7 @@ mechanics and waves come next.
 | Attackers | Target the core first; players only inside a 6-block aggro radius or when they hit the mob. See the roster below. |
 | Breaching | Stuck attackers break what's in their way. Each block type has a breach time (cobblestone ~4 s for one digger, obsidian ~100 s), scaled by the DM's breach multiplier; damage decays, and broken blocks drop nothing. Explosions never destroy the core's block. |
 | Waves and phases | Waves are assembled from groups and spawn on a schedule; phases (setup, prep, wave, intermission, won, lost) can carry a timer shown on every player's action bar with the core's health. Clearing the final wave wins. |
-| Supply depot | An open spruce pavilion about 50 blocks from the core, with 11 labelled chests of starter kits and a path back to the core. |
+| Supply depot | An open spruce pavilion about 50 blocks from the core, with 20 barrels of starter kits in 11 labelled columns (9 armour sets, 16 weapon sets with ammo, ~100 stacks of building blocks, buckets, redstone, food, potions, tools, enchanting) and a path back to the core. |
 
 ### Roster
 
@@ -82,8 +82,8 @@ Crafty's remote console).
 | `spawn` | `{"mob":"dm:digger","count":3,"bearing":90,"dist":30}` | Ad-hoc spawn outside a wave. |
 | `targeting` | `{"targeting":"core_only"}` | Switch every live attacker's targeting (`core_only`, `prioritized`, `nearest`). |
 | `kill_all` | `{}` | Remove all attackers (aborts a running wave). |
-| `depot` | `{"dist":50}` or `{"x":..,"z":..,"y"?}` | Build the supply depot on the flattest spot at `dist` from the core, or at x/z. Run again to rebuild in place; add `"relocate":true` to move it. |
-| `depot_restock` | `{}` | Refill every depot chest with its kit. |
+| `depot` | `{"dist":50}` or `{"x":..,"z":..,"y"?}` | Build the supply depot on the flattest spot at `dist` from the core, or at x/z. Run again to rebuild in place; add `"relocate":true` to move it, or `"containers_only":true` to replace just the barrels (and restock) without touching the pavilion or what players built around it. |
+| `depot_restock` | `{}` | Refill every depot barrel with its kit. |
 | `probe` | `{"every":20}` / `{"on":false}` | Log attacker positions and distance to the core. |
 | `players` | `{}` | Everyone online, as in the `players` reports. |
 | `rain` | `{"count":12,"radius":12,"duration_s":6,"quality":2}` | Reward: key survival items fall from the sky at random spots around the core (quality 1 basic, 2 good, 3 great). |

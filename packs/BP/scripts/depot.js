@@ -4,7 +4,7 @@
 // `dm:depot_restock`).
 
 import { BlockPermutation, BlockVolume, EnchantmentType, ItemStack, SignSide, world } from "@minecraft/server";
-import { KITS } from "./kits.js";
+import { COLUMNS, KITS } from "./kits.js";
 
 const DEPOT_PROP = "dtc:depot"; // JSON {center, facing, chests: [{x, y, z, kit}]}
 const HALF = 7; // the site is (2 * HALF + 1) blocks square
@@ -179,8 +179,9 @@ const SLAB = ["minecraft:spruce_slab", "minecraft:wooden_slab"];
 const FENCE = ["minecraft:spruce_fence", "minecraft:fence"];
 const BOTTOM = { "minecraft:vertical_half": "bottom" };
 
-// Chest spots (local): back row facing the entrance, side rows facing inward.
-// Every chest is two blocks from the next so none merge into double chests.
+// Columns (local): back row facing the entrance, side rows facing inward.
+// Each column is up to two barrels high (barrels never merge and open with
+// a block on top), two blocks from the next, with a sign on top.
 const CHEST_SPOTS = [
   [-4, -4, "south"], [-2, -4, "south"], [0, -4, "south"], [2, -4, "south"], [4, -4, "south"],
   [-4, -2, "east"], [-4, 0, "east"], [-4, 2, "east"],
@@ -233,14 +234,25 @@ function buildPavilion(b) {
   b.sign(-2, 1, HALF,"§lSupply Depot§r\nDefend the Core\n§7alpha kits", "south");
 }
 
+const BARREL_FACING = { down: 0, up: 1, north: 2, south: 3, west: 4, east: 5 };
+
 function buildChests(b) {
   const chests = [];
   CHEST_SPOTS.forEach(([x, z, face], i) => {
-    const kit = KITS[i];
-    if (!kit) return;
-    b.set(x, 1, z, "minecraft:chest", { "minecraft:cardinal_direction": b.dir(face) });
-    b.sign(x, 2, z, `§l${kit.label}`, face);
-    chests.push({ ...b.at(x, 1, z), kit: kit.id });
+    const kits = (COLUMNS[i] ?? []).map((id) => KITS.find((k) => k.id === id)).filter(Boolean);
+    // Clear what an older depot left in the column (a chest, its sign).
+    b.fill(x, 1, z, x, 3, z, "minecraft:air");
+    kits.forEach((kit, level) => {
+      b.set(x, 1 + level, z, "minecraft:barrel", { facing_direction: BARREL_FACING[b.dir(face)] });
+      chests.push({ ...b.at(x, 1 + level, z), kit: kit.id });
+    });
+    if (!kits.length) return;
+    // Top barrel first, as the column reads from the top.
+    const text =
+      kits.length > 1
+        ? `§l${kits[1].label}§r\n§7(top)§r\n§l${kits[0].label}§r\n§7(bottom)`
+        : `§l${kits[0].label}`;
+    b.sign(x, 1 + kits.length, z, text, face);
   });
   return chests;
 }
@@ -315,6 +327,10 @@ function stockChest(dim, spot, errors) {
       }
       continue;
     }
+    if (slot >= container.size) {
+      errors.add(`${kit.id} does not fit: ${id} and later items left out`);
+      break;
+    }
     let left = count;
     while (left > 0 && slot < container.size) {
       let item;
@@ -329,6 +345,7 @@ function stockChest(dim, spot, errors) {
       enchant(item, extra, errors);
       container.setItem(slot++, item);
     }
+    if (left > 0 && slot >= container.size) errors.add(`${kit.id} does not fit: ${left} ${id} left out`);
   }
   return slot;
 }
@@ -353,6 +370,17 @@ function demolish(dim, depot) {
 export function buildDepot(core, msg) {
   const dim = world.getDimension("overworld");
   let existing = storedDepot();
+  if (msg.containers_only) {
+    // Swap the containers for the current layout and restock, leaving the
+    // pavilion and anything players built around it alone. Items players
+    // left in the old containers are lost.
+    if (!existing) throw new Error("no depot built");
+    const b = new Builder(dim, existing.center, existing.facing);
+    const chests = buildChests(b);
+    world.setDynamicProperty(DEPOT_PROP, JSON.stringify({ ...existing, chests }));
+    const stock = restockDepot();
+    return { center: existing.center, containers_only: true, ...stock, errors: [...b.errors, ...stock.errors] };
+  }
   const explicit = Number.isInteger(msg.x) && Number.isInteger(msg.z);
   const moving =
     existing && (msg.relocate || (explicit && (msg.x !== existing.center.x || msg.z !== existing.center.z)));
