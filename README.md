@@ -32,8 +32,13 @@ mechanics and waves come next.
 | `dm:digger` | zombie with pickaxe | `dig` (dps 1.5) |
 | `dm:sapper` | creeper | `detonate_stuck` (after 6 s stuck) |
 | `dm:siege_skeleton` | stray | `siege_arrow` (1.5 per hit; stuck archers lob volleys) |
+| `dm:ghast` | ghast (flies) | `artillery` (fireball at the core every 5 s within 64 blocks; drifts in to ~18 blocks). Blasts break blocks. Targets the core only. |
+| `dm:blaze` | blaze (hovers) | none: bursts of small fireballs that set fires |
+| `dm:phantom` | phantom (flies) | none: swoops at the core; a roof over the core stops it |
 
 Modules are set per spawn group, so any mob can carry any module.
+Flyers ignore walls; their answer is cover (a roof) and players shooting back.
+Ghast blasts and dm:fireball explosions never destroy the core's own block.
 
 ### Players and chat
 

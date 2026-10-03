@@ -1,0 +1,236 @@
+{
+  "format_version": "1.26.50",
+  "minecraft:entity": {
+    "description": {
+      "identifier": "dm:blaze",
+      "is_summonable": true,
+      "is_spawnable": true,
+      "runtime_identifier": "minecraft:blaze"
+    },
+    "components": {
+      "minecraft:type_family": {
+        "family": [
+          "dm_attacker",
+          "blaze",
+          "monster",
+          "mob"
+        ]
+      },
+      "minecraft:health": {
+        "value": 20,
+        "max": 20
+      },
+      "minecraft:movement": {
+        "value": 0.23
+      },
+      "minecraft:follow_range": {
+        "value": 64,
+        "max": 64
+      },
+      "minecraft:collision_box": {
+        "width": 0.5,
+        "height": 1.8
+      },
+      "minecraft:behavior.hurt_by_target": {
+        "priority": 1,
+        "entity_types": [
+          {
+            "filters": {
+              "test": "is_family",
+              "subject": "other",
+              "operator": "!=",
+              "value": "dm_attacker"
+            }
+          }
+        ]
+      },
+      "minecraft:behavior.look_at_player": {
+        "priority": 8,
+        "look_distance": 6
+      },
+      "minecraft:behavior.random_look_around": {
+        "priority": 9
+      },
+      "minecraft:breathable": {
+        "total_supply": 15,
+        "suffocate_time": 0,
+        "breathes_air": true,
+        "breathes_water": true
+      },
+      "minecraft:physics": {},
+      "minecraft:pushable_by_entity": {},
+      "minecraft:nameable": {},
+      "minecraft:persistent": {},
+      "minecraft:conditional_bandwidth_optimization": {},
+      "minecraft:hurt_on_condition": {
+        "damage_conditions": [
+          {
+            "cause": "lava",
+            "damage_per_tick": 4,
+            "filters": {
+              "test": "in_lava"
+            }
+          }
+        ]
+      },
+      "minecraft:fire_immune": {},
+      "minecraft:movement.basic": {},
+      "minecraft:jump.static": {},
+      "minecraft:navigation.walk": {
+        "avoid_damage_blocks": true,
+        "avoid_water": true,
+        "can_path_over_water": true
+      },
+      "minecraft:behavior.float": {
+        "priority": 0
+      },
+      "minecraft:behavior.ranged_attack": {
+        "priority": 3,
+        "attack_interval": {
+          "min": 3.0,
+          "max": 5.0
+        },
+        "attack_range": {
+          "min": 0.0,
+          "max": 48.0
+        },
+        "charge_shoot_trigger": 4.0,
+        "burst_shots": 3,
+        "burst_interval": 0.3
+      },
+      "minecraft:shooter": {
+        "def": "minecraft:small_fireball"
+      }
+    },
+    "component_groups": {
+      "dm:tgt_core_only": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 64,
+          "target_search_height": 80,
+          "entity_types": [
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "dm_core"
+              },
+              "max_dist": 64,
+              "must_see": false
+            }
+          ]
+        }
+      },
+      "dm:tgt_prioritized": {
+        "minecraft:behavior.nearest_prioritized_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 64,
+          "target_search_height": 80,
+          "entity_types": [
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "dm_core"
+              },
+              "max_dist": 64,
+              "must_see": false,
+              "priority": 0
+            },
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "player"
+              },
+              "max_dist": 6,
+              "must_see": true,
+              "priority": 1
+            }
+          ]
+        }
+      },
+      "dm:tgt_nearest": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 64,
+          "target_search_height": 80,
+          "entity_types": [
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "dm_core"
+              },
+              "max_dist": 64,
+              "must_see": false
+            },
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "player"
+              },
+              "max_dist": 6,
+              "must_see": true
+            }
+          ]
+        }
+      }
+    },
+    "events": {
+      "minecraft:entity_spawned": {
+        "add": {
+          "component_groups": [
+            "dm:tgt_prioritized"
+          ]
+        }
+      },
+      "dm:tgt_core_only": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_prioritized",
+            "dm:tgt_nearest"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_core_only"
+          ]
+        }
+      },
+      "dm:tgt_prioritized": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_core_only",
+            "dm:tgt_nearest"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_prioritized"
+          ]
+        }
+      },
+      "dm:tgt_nearest": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_core_only",
+            "dm:tgt_prioritized"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_nearest"
+          ]
+        }
+      }
+    }
+  }
+}

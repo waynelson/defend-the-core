@@ -238,6 +238,48 @@ const VOLLEY_TICKS = 30;
 const ARROW_SPEED = 1.4; // blocks per tick
 const ARROW_GRAVITY = 0.05; // blocks per tick², vanilla arrow
 
+const ARTILLERY_RANGE = 64;
+// Artillery carriers are nudged in until they are this close (horizontally)
+// and no higher than this above the core, so they fire down over hills
+// and walls instead of into them (ghast AI won't close in on its own).
+const ARTILLERY_STANDOFF = 18;
+const ARTILLERY_CEILING = 30;
+const NUDGE = 0.06;
+const FIREBALL_SPEED = 1.2; // blocks per tick; fireballs fly straight
+
+/** artillery: every interval_s, a carrier within range fires a fireball
+ * straight at the core. The vanilla ghast AI won't reliably fire on a
+ * non-player target from where it floats, so this does it. The vanilla
+ * fireball is not summonable; dm:fireball is a copy that is. */
+function artillery(mob, state, core, params) {
+  const p = mob.location;
+  const flat = Math.hypot(core.x - p.x, core.z - p.z);
+  const above = p.y - core.y;
+  const push = {
+    x: flat > ARTILLERY_STANDOFF ? ((core.x - p.x) / flat) * NUDGE : 0,
+    y: above > ARTILLERY_CEILING ? -NUDGE : 0,
+    z: flat > ARTILLERY_STANDOFF ? ((core.z - p.z) / flat) * NUDGE : 0,
+  };
+  if (push.x || push.y || push.z) tryFx(() => mob.applyImpulse(push));
+  const now = system.currentTick;
+  if (now - (state.lastShot ?? 0) < params.interval_s * 20) return;
+  const from = mob.getHeadLocation();
+  const dx = core.x - from.x;
+  const dy = core.y + 0.5 - from.y;
+  const dz = core.z - from.z;
+  const dist = Math.hypot(dx, dy, dz);
+  if (dist > ARTILLERY_RANGE || dist < 3) return;
+  state.lastShot = now;
+  // Start a little in front of the mob so the fireball clears its own box.
+  const start = { x: from.x + (dx / dist) * 2.5, y: from.y + (dy / dist) * 2.5, z: from.z + (dz / dist) * 2.5 };
+  const fireball = mob.dimension.spawnEntity("dm:fireball", start);
+  const projectile = fireball.getComponent("minecraft:projectile");
+  if (!projectile) return fireball.remove();
+  projectile.owner = mob;
+  projectile.shoot({ x: (dx / dist) * FIREBALL_SPEED, y: (dy / dist) * FIREBALL_SPEED, z: (dz / dist) * FIREBALL_SPEED });
+  tryFx(() => mob.dimension.playSound("mob.ghast.fireball", from));
+}
+
 /** Fires an arrow from the mob's head on an arc that lands on the core. */
 function lobArrow(mob, core) {
   const from = mob.getHeadLocation();
@@ -300,6 +342,9 @@ function tick() {
     try {
       const state = sample(mob, core);
       if (state.stuckSince !== undefined) runModules(mob, state, core);
+      // Ranged modules that fire whether or not the mob is stuck.
+      const params = mobModules(mob).artillery;
+      if (params) artillery(mob, state, core, params);
     } catch {
       // the mob unloaded or died mid-sample
     }

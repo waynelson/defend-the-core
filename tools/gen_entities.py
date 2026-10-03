@@ -45,9 +45,28 @@ ROSTER = {
     },
     "sapper": {
         "base": "creeper", "name": "Sapper", "health": 20, "speed": 0.22,
-        "families": ["creeper"], "power": 3,
+        "families": ["creeper"], "power": 3, "template": "creeper",
+    },
+    # Flyers: no breach modules; they bypass walls and attack from the air.
+    "ghast": {
+        "base": "ghast", "name": "Siege Ghast", "health": 20, "speed": 0.06,
+        "families": ["ghast"], "template": "ghast", "runtime": True, "targeting": "core_only",
+    },
+    "blaze": {
+        "base": "blaze", "name": "Blaze", "health": 20, "speed": 0.23,
+        "families": ["blaze"], "template": "blaze", "runtime": True,
+    },
+    "phantom": {
+        "base": "phantom", "name": "Phantom", "health": 20, "speed": 1.8, "attack": 6,
+        "families": ["phantom", "undead"], "template": "phantom",
     },
 }
+FLYERS = ("ghast", "blaze", "phantom")
+# Walking parts of common_components() a flyer doesn't get.
+WALKING = (
+    "minecraft:navigation.walk", "minecraft:movement.basic", "minecraft:jump.static",
+    "minecraft:can_climb", "minecraft:behavior.random_stroll", "minecraft:pushable_by_block",
+)
 
 # ---------------------------------------------------------------- behavior
 
@@ -63,8 +82,11 @@ def target_entry(family, max_dist, must_see, priority=None):
     return entry
 
 
-def targeting_groups():
+def targeting_groups(flyer=False):
     common = {"priority": 2, "must_see": False, "reselect_targets": True, "within_radius": 64}
+    if flyer:
+        # Flyers sit well above the core; without this they never pick it up.
+        common["target_search_height"] = 80
     return {
         # Core only; ignores players unless hurt by one.
         "dm:tgt_core_only": {
@@ -142,8 +164,9 @@ def common_components(mob):
 
 def behavior(name, mob):
     components = common_components(mob)
-    groups = targeting_groups()
-    events = {"minecraft:entity_spawned": {"add": {"component_groups": ["dm:tgt_prioritized"]}}}
+    groups = targeting_groups(flyer=mob["base"] in FLYERS)
+    default = mob.get("targeting", "prioritized")
+    events = {"minecraft:entity_spawned": {"add": {"component_groups": [f"dm:tgt_{default}"]}}}
     events.update(targeting_events())
 
     if mob["base"] == "zombie":
@@ -158,6 +181,63 @@ def behavior(name, mob):
             "attack_range": {"min": 0.0, "max": 15.0},
         }
         components["minecraft:navigation.walk"]["avoid_water"] = True
+    elif mob["base"] in FLYERS:
+        for key in WALKING:
+            components.pop(key, None)
+        components["minecraft:can_fly"] = {}
+        components["minecraft:fire_immune"] = {}
+        flight = {
+            # Floats slowly and shells the core from up to 64 blocks; its
+            # fireballs explode and break blocks.
+            "ghast": {
+                "minecraft:collision_box": {"width": 4.0, "height": 4.0},
+                "minecraft:physics": {},
+                "minecraft:navigation.float": {"can_path_over_water": True},
+                "minecraft:behavior.float": {"priority": 0},
+                "minecraft:behavior.float_wander": {
+                    # Vanilla wander drifts upward until the ghast is too high to
+                    # fire at the core (tested); keep it low and close.
+                    "priority": 3, "must_reach": True, "random_reselect": True, "float_duration": {"min": 2, "max": 7},
+                    "xz_dist": 8, "y_dist": 3, "y_offset": -2,
+                },
+                "minecraft:behavior.ranged_attack": {
+                    "priority": 1, "attack_range": {"min": 0.0, "max": 64.0},
+                    "charge_charged_trigger": 1, "charge_shoot_trigger": 2,
+                },
+                "minecraft:shooter": {"def": "minecraft:fireball"},
+            },
+            # Fires bursts of small fireballs, which set wooden defenses
+            # alight. Its flight comes from the vanilla blaze runtime, which
+            # walks on vanilla's components, so it keeps them.
+            "blaze": {
+                "minecraft:collision_box": {"width": 0.5, "height": 1.8},
+                "minecraft:physics": {},
+                "minecraft:movement.basic": {},
+                "minecraft:jump.static": {},
+                "minecraft:navigation.walk": {"avoid_damage_blocks": True, "avoid_water": True, "can_path_over_water": True},
+                "minecraft:behavior.float": {"priority": 0},
+                "minecraft:behavior.ranged_attack": {
+                    "priority": 3, "attack_interval": {"min": 3.0, "max": 5.0}, "attack_range": {"min": 0.0, "max": 48.0},
+                    "charge_shoot_trigger": 4.0, "burst_shots": 3, "burst_interval": 0.3,
+                },
+                "minecraft:shooter": {"def": "minecraft:small_fireball"},
+            },
+            # Circles high above and swoops down on its target.
+            "phantom": {
+                "minecraft:collision_box": {"width": 0.9, "height": 0.5},
+                "minecraft:physics": {"has_gravity": False},
+                "minecraft:movement.glide": {"start_speed": 0.1, "speed_when_turning": 0.2},
+                "minecraft:attack": {"damage": mob.get("attack", 6)},
+                "minecraft:behavior.swoop_attack": {"priority": 2},
+                "minecraft:behavior.circle_around_anchor": {
+                    "priority": 3, "goal_radius": 1, "height_offset_range": {"min": -4, "max": 5},
+                    "height_above_target_range": {"min": 10, "max": 20},
+                },
+            },
+        }[mob["base"]]
+        components.update(flight)
+        if mob["base"] == "blaze":
+            components.pop("minecraft:can_fly", None)
     elif mob["base"] == "creeper":
         components["minecraft:collision_box"] = {"width": 0.6, "height": 1.8}
         components["minecraft:attack"] = {"damage": 3}
@@ -194,7 +274,12 @@ def behavior(name, mob):
     return {
         "format_version": "1.26.50",
         "minecraft:entity": {
-            "description": {"identifier": f"dm:{name}", "is_summonable": True, "is_spawnable": True},
+            "description": {
+                "identifier": f"dm:{name}",
+                "is_summonable": True,
+                "is_spawnable": True,
+                **({"runtime_identifier": f"minecraft:{mob['base']}"} if mob.get("runtime") else {}),
+            },
             "components": components,
             "component_groups": groups,
             "events": events,
@@ -234,9 +319,9 @@ HUMANOID_CONTROLLERS = [
 
 def client(name, mob):
     ident = f"dm:{name}"
-    if mob["base"] == "creeper":
-        # Mojang's 1.10 creeper client entity, renamed (tools/templates).
-        data = json.loads((ROOT / "tools/templates/creeper.entity.json").read_text(encoding="utf-8"))
+    if mob.get("template"):
+        # A Mojang client entity in the 1.8/1.10 format, renamed (tools/templates).
+        data = json.loads((ROOT / f"tools/templates/{mob['template']}.entity.json").read_text(encoding="utf-8"))
         data["minecraft:client_entity"]["description"]["identifier"] = ident
         return data
 

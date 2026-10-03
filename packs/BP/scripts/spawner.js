@@ -33,7 +33,7 @@ export function spawnCenter(spec) {
 /** Checks a spawn spec without spawning; returns the resolved modules. */
 export function validateSpawn(spec) {
   if (!MOBS[spec.mob]) throw new Error(`unknown mob ${spec.mob}`);
-  const targeting = spec.targeting ?? "prioritized";
+  const targeting = spec.targeting ?? MOBS[spec.mob].targeting ?? "prioritized";
   if (!TARGETING.includes(targeting)) throw new Error(`targeting must be one of ${TARGETING}`);
   spawnCenter(spec);
   return resolveModules(spec.mob, spec.modules);
@@ -49,8 +49,9 @@ export function spawnOne(spec, center, modules, tags = {}) {
   if (!dim.isChunkLoaded({ x, y: 0, z })) return undefined;
   const top = dim.getTopmostBlock({ x, z });
   if (!top) return undefined;
-  const mob = dim.spawnEntity(spec.mob, { x: x + 0.5, y: top.location.y + 1, z: z + 0.5 });
-  const targeting = spec.targeting ?? "prioritized";
+  const height = MOBS[spec.mob]?.spawn_height ?? 1;
+  const mob = dim.spawnEntity(spec.mob, { x: x + 0.5, y: top.location.y + height, z: z + 0.5 });
+  const targeting = spec.targeting ?? MOBS[spec.mob]?.targeting ?? "prioritized";
   mob.triggerEvent(`dm:tgt_${targeting}`);
   mob.setDynamicProperty("dtc:targeting", targeting);
   mob.setDynamicProperty("dtc:modules", JSON.stringify(modules));

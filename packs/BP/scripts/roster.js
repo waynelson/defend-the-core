@@ -8,6 +8,12 @@ export const MOBS = {
   "dm:digger": { label: "Digger", modules: { dig: { dps: 1.5 } } },
   "dm:sapper": { label: "Sapper", modules: { detonate_stuck: { stuck_seconds: 6 } } },
   "dm:siege_skeleton": { label: "Siege Archer", modules: { siege_arrow: { damage_per_hit: 1.5 } } },
+  // Flyers spawn spawn_height blocks above the ground and ignore walls.
+  // Ghasts with player targeting rise out of firing range and stall
+  // (tested), so they default to the core only.
+  "dm:ghast": { label: "Siege Ghast", modules: { artillery: { interval_s: 5 } }, spawn_height: 8, targeting: "core_only" },
+  "dm:blaze": { label: "Blaze", modules: {}, spawn_height: 8 },
+  "dm:phantom": { label: "Phantom", modules: {}, spawn_height: 18 },
 };
 
 /** Module name -> param name -> [min, max]. */
@@ -15,6 +21,7 @@ export const MODULES = {
   dig: { dps: [0.1, 10] },
   detonate_stuck: { stuck_seconds: [1, 60] },
   siege_arrow: { damage_per_hit: [0.1, 20] },
+  artillery: { interval_s: [2, 30] },
 };
 
 export const TARGETING = ["core_only", "prioritized", "nearest"];
