@@ -101,6 +101,7 @@ tools/build.py     zip both packs into dist/ (--release: tagged version)
 tools/deploy.py    build and install on a Crafty-managed server via its addon API
 tools/dm.py        send dm:* commands through Crafty and print the [DM] replies
 tools/experiments.py  enable the Beta APIs experiment in a server's world (for the chat bridge)
+tools/pregen.py    generate (and save) every chunk within N chunks of a point before players join
 docs/M0.md         spike results
 ```
 
