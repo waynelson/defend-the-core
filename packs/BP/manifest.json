@@ -4,25 +4,25 @@
     "name": "Defend the Core",
     "description": "Tower defense: protect the core from DM-driven waves.",
     "uuid": "a380b97c-6e5c-4284-a098-a449d108360d",
-    "version": [0, 1, 0],
+    "version": [0, 2, 0],
     "min_engine_version": [1, 26, 50]
   },
   "modules": [
     {
       "type": "data",
       "uuid": "370bba07-b665-4a17-87bd-e88b78859500",
-      "version": [0, 1, 0]
+      "version": [0, 2, 0]
     },
     {
       "type": "script",
       "language": "javascript",
       "uuid": "5c19a7a8-77f5-418e-ac97-7034762b5c80",
-      "version": [0, 1, 0],
+      "version": [0, 2, 0],
       "entry": "scripts/main.js"
     }
   ],
   "dependencies": [
-    { "uuid": "7a552bf4-baa1-4e66-ac2e-434fd3f3ea10", "version": [0, 1, 0] },
+    { "uuid": "7a552bf4-baa1-4e66-ac2e-434fd3f3ea10", "version": [0, 2, 0] },
     { "module_name": "@minecraft/server", "version": "2.10.0" }
   ]
 }
