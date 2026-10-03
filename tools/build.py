@@ -1,11 +1,17 @@
-"""Zip packs/BP and packs/RP into dist/defend_the_core.mcaddon.
+"""Zip packs/BP and packs/RP into an .mcaddon in dist/.
 
-Each build stamps an increasing patch number into both manifests (and the
-BP's dependency on the RP) inside the zip only, so clients that cached an
-earlier resource pack download the new one.
+    python tools/build.py             # dev build: dist/defend_the_core.mcaddon
+    python tools/build.py --release   # release: dist/defend_the_core-<version>.mcaddon
+
+Dev builds stamp patch 1000 + an increasing counter into both manifests (and
+the BP's dependency on the RP) inside the zip only, so clients that cached an
+earlier resource pack download the new one. Release builds use the manifest
+version as written; keep its patch below 1000 so a release and a dev build
+never share a version.
 """
 
 import json
+import sys
 import zipfile
 from pathlib import Path
 
@@ -13,7 +19,11 @@ ROOT = Path(__file__).resolve().parent.parent
 PACKS = {"BP": "defend_the_core_BP", "RP": "defend_the_core_RP"}
 DIST = ROOT / "dist"
 COUNTER = DIST / ".build"
-OUT = DIST / "defend_the_core.mcaddon"
+DEV_PATCH_BASE = 1000
+
+
+def manifest_version() -> list:
+    return json.loads((ROOT / "packs/BP/manifest.json").read_text())["header"]["version"]
 
 
 def next_build() -> int:
@@ -22,10 +32,8 @@ def next_build() -> int:
     return build
 
 
-def stamp(manifest: dict, build: int, rp_uuid: str) -> dict:
+def stamp(manifest: dict, version: list, rp_uuid: str) -> dict:
     manifest = json.loads(json.dumps(manifest))
-    major, minor, _ = manifest["header"]["version"]
-    version = [major, minor, build]
     manifest["header"]["version"] = version
     for module in manifest["modules"]:
         module["version"] = version
@@ -35,11 +43,19 @@ def stamp(manifest: dict, build: int, rp_uuid: str) -> dict:
     return manifest
 
 
-def main() -> Path:
+def main(release: bool = False) -> Path:
     DIST.mkdir(exist_ok=True)
-    build = next_build()
+    major, minor, patch = manifest_version()
+    if release:
+        if patch >= DEV_PATCH_BASE:
+            sys.exit(f"release patch must be below {DEV_PATCH_BASE}")
+        version = [major, minor, patch]
+        out = DIST / f"defend_the_core-{major}.{minor}.{patch}.mcaddon"
+    else:
+        version = [major, minor, DEV_PATCH_BASE + next_build()]
+        out = DIST / "defend_the_core.mcaddon"
     rp_uuid = json.loads((ROOT / "packs/RP/manifest.json").read_text())["header"]["uuid"]
-    with zipfile.ZipFile(OUT, "w", zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
         for src, folder in PACKS.items():
             base = ROOT / "packs" / src
             for path in sorted(base.rglob("*")):
@@ -47,13 +63,13 @@ def main() -> Path:
                     continue
                 arc = f"{folder}/{path.relative_to(base).as_posix()}"
                 if path.name == "manifest.json" and path.parent == base:
-                    manifest = stamp(json.loads(path.read_text()), build, rp_uuid)
+                    manifest = stamp(json.loads(path.read_text()), version, rp_uuid)
                     zf.writestr(arc, json.dumps(manifest, indent=2))
                 else:
                     zf.write(path, arc)
-    print(f"built {OUT.relative_to(ROOT)} (version 0.1.{build})")
-    return OUT
+    print(f"built {out.relative_to(ROOT)} (version {'.'.join(map(str, version))})")
+    return out
 
 
 if __name__ == "__main__":
-    main()
+    main(release="--release" in sys.argv)

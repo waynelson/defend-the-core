@@ -1,12 +1,14 @@
-"""Talk to the mc-testing Crafty node using the hub's stored remote-node token.
+"""Talk to a Crafty node using the hub's stored remote-node token.
 
     python tools/node.py get  servers/{sid}/stats
     python tools/node.py post servers/{sid}/files '{"page":"files","path":"x"}'
 
-`{sid}` expands to the test server id.
+`{sid}` expands to the target's server id.
 
-Environment: CRAFTY_HUB_DB (hub sqlite path), DTC_NODE (remote node name),
-DTC_SERVER (server id on that node).
+Targets: `dev` (mc-testing, wipe and restart freely) and `beta` (mc-defend,
+the beta testers' server; deploy only on request). DTC_TARGET picks one
+(default dev). Environment: CRAFTY_HUB_DB (hub sqlite path), DTC_NODE and
+DTC_SERVER (override the target's node name and server id).
 """
 
 import json
@@ -17,8 +19,15 @@ import sys
 import urllib.request
 
 HUB_DB = os.environ.get("CRAFTY_HUB_DB", r"C:\crafty\app\config\db\crafty.sqlite")
-NODE_NAME = os.environ.get("DTC_NODE", "mc-testing")
-SERVER_ID = os.environ.get("DTC_SERVER", "53b99c65-fc31-4c5e-9434-c806c4db0aa0")
+TARGETS = {
+    "dev": ("mc-testing", "53b99c65-fc31-4c5e-9434-c806c4db0aa0"),
+    "beta": ("mc-defend", "8c0e5b50-d3fa-444c-87df-62e2995b5ba3"),
+}
+TARGET = os.environ.get("DTC_TARGET", "dev")
+if TARGET not in TARGETS:
+    sys.exit(f"DTC_TARGET must be one of {', '.join(TARGETS)}")
+NODE_NAME = os.environ.get("DTC_NODE", TARGETS[TARGET][0])
+SERVER_ID = os.environ.get("DTC_SERVER", TARGETS[TARGET][1])
 
 
 def node():

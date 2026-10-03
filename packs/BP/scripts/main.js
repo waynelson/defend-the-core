@@ -5,7 +5,7 @@
 // a `[DM] {json}` line in the server log.
 
 import { system, world } from "@minecraft/server";
-import { buildDepot, restockDepot } from "./depot.js";
+import { buildDepot, depotSitesLoaded, restockDepot } from "./depot.js";
 
 const CORE_PROP = "dtc:core"; // world dynamic property: JSON {x, y, z, inside}
 const ATTACKER_FAMILY = "dm_attacker";
@@ -213,6 +213,44 @@ const handlers = {
   },
   depot_restock() {
     return restockDepot();
+  },
+  // One-shot world setup for a fresh server: {x?, z?, dist?: 50}. Puts the
+  // core on a beacon at x/z (default: world spawn), keeps the area loaded,
+  // builds the depot and moves world spawn to the depot entrance. Chunks load
+  // asynchronously, so the result arrives later as a `setup_done` line.
+  setup(msg) {
+    const spawn = world.getDefaultSpawnLocation();
+    const x = msg.x ?? Math.floor(spawn.x);
+    const z = msg.z ?? Math.floor(spawn.z);
+    if (![x, z].every(Number.isInteger)) throw new Error("x and z must be integers");
+    overworld().runCommand(`tickingarea remove dtc_core`);
+    const started = system.currentTick;
+    // The removed area's name stays taken until the next tick.
+    system.runTimeout(() => {
+      const added = overworld().runCommand(`tickingarea add circle ${x} 0 ${z} 4 dtc_core true`);
+      if (!added.successCount) emit("setup_progress", { msg_id: msg.msg_id, error: "tickingarea add failed" });
+    }, 2);
+    const dist = msg.dist ?? 50;
+    const poll = system.runInterval(() => {
+      const timedOut = system.currentTick - started > 20 * 60;
+      const coreLoaded = overworld().isChunkLoaded({ x, y: 0, z });
+      if (!coreLoaded && timedOut) {
+        system.clearRun(poll);
+        emit("setup_done", { msg_id: msg.msg_id, ok: false, error: "chunks did not load in 60 s" });
+      }
+      // Wait for every depot candidate too; after 60 s, use whichever loaded.
+      if (!coreLoaded || (!timedOut && !depotSitesLoaded({ x, z }, dist))) return;
+      system.clearRun(poll);
+      try {
+        handlers.core_set({ x, z, setblock: true });
+        const depot = buildDepot(coreLocation(), { dist, relocate: true });
+        world.setDefaultSpawnLocation(depot.entrance);
+        emit("setup_done", { msg_id: msg.msg_id, ok: true, core: coreLocation(), depot });
+      } catch (err) {
+        emit("setup_done", { msg_id: msg.msg_id, ok: false, error: String(err) });
+      }
+    }, 20);
+    return { core_at: { x, z }, waiting_for_chunks: true };
   },
   kill_all() {
     const mobs = attackers();

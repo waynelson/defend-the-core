@@ -95,7 +95,29 @@ class Builder {
 
 // ---------------------------------------------------------------- site
 
+function siteLoaded(dim, x, z) {
+  return [-HALF, HALF].every((dx) =>
+    [-HALF, HALF].every((dz) => dim.isChunkLoaded({ x: x + dx, y: 0, z: z + dz }))
+  );
+}
+
+function candidates(core, dist) {
+  const sites = [];
+  for (let deg = 0; deg < 360; deg += 30) {
+    const rad = (deg * Math.PI) / 180;
+    sites.push({ deg, x: Math.round(core.x + Math.sin(rad) * dist), z: Math.round(core.z - Math.cos(rad) * dist) });
+  }
+  return sites;
+}
+
+/** Whether every candidate site at `dist` from the core is loaded. */
+export function depotSitesLoaded(core, dist = 50) {
+  const dim = world.getDimension("overworld");
+  return candidates(core, dist).every((s) => siteLoaded(dim, s.x, s.z));
+}
+
 function survey(dim, x, z) {
+  if (!siteLoaded(dim, x, z)) return undefined;
   const heights = [];
   let unsafe = 0;
   for (let dx = -HALF; dx <= HALF; dx += 2) {
@@ -133,9 +155,8 @@ function chooseSite(dim, core, msg, existing) {
   if (existing && !msg.relocate) return { ...existing.center, score: 0 };
   const dist = msg.dist ?? 50;
   let best;
-  for (let deg = 0; deg < 360; deg += 30) {
-    const rad = (deg * Math.PI) / 180;
-    const site = survey(dim, Math.round(core.x + Math.sin(rad) * dist), Math.round(core.z - Math.cos(rad) * dist));
+  for (const { deg, x, z } of candidates(core, dist)) {
+    const site = survey(dim, x, z);
     if (site && (!best || site.score < best.score)) best = { ...site, bearing: deg };
   }
   if (!best) throw new Error(`nothing loaded ${dist} blocks from the core; add a ticking area`);
@@ -321,16 +342,27 @@ export function restockDepot() {
   return { chests: depot.chests.length, slots, errors: [...errors] };
 }
 
+/** Knock a depot down to a lawn at its floor level. */
+function demolish(dim, depot) {
+  const old = new Builder(dim, depot.center, depot.facing);
+  old.fill(-HALF, 1, -HALF, HALF, 14, HALF, "minecraft:air");
+  old.fill(-HALF, 0, -HALF, HALF, 0, HALF, "minecraft:grass_block");
+  world.setDynamicProperty(DEPOT_PROP, undefined);
+}
+
 export function buildDepot(core, msg) {
   const dim = world.getDimension("overworld");
-  const existing = storedDepot();
-  const site = chooseSite(dim, core, msg, existing);
-  if (existing && ["x", "y", "z"].some((k) => existing.center[k] !== site[k])) {
-    // Moving: knock the old pavilion down to a lawn.
-    const old = new Builder(dim, existing.center, existing.facing);
-    old.fill(-HALF, 1, -HALF, HALF, 14, HALF, "minecraft:air");
-    old.fill(-HALF, 0, -HALF, HALF, 0, HALF, "minecraft:grass_block");
+  let existing = storedDepot();
+  const explicit = Number.isInteger(msg.x) && Number.isInteger(msg.z);
+  const moving =
+    existing && (msg.relocate || (explicit && (msg.x !== existing.center.x || msg.z !== existing.center.z)));
+  // Demolish before surveying, or the survey reads the old roof as ground.
+  if (moving) {
+    demolish(dim, existing);
+    existing = undefined;
   }
+  const site = chooseSite(dim, core, msg, existing);
+  if (existing && site.y !== existing.center.y) demolish(dim, existing);
   const facing = facingToward(site, core);
   const b = new Builder(dim, { x: site.x, y: site.y, z: site.z }, facing);
   buildPavilion(b);
@@ -340,6 +372,7 @@ export function buildDepot(core, msg) {
   const stock = restockDepot();
   return {
     center: b.center,
+    entrance: b.at(0, 1, HALF + 1),
     bearing: site.bearing,
     facing,
     unevenness: site.score,
