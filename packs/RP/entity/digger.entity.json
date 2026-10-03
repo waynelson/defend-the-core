@@ -2,16 +2,16 @@
   "format_version": "1.8.0",
   "minecraft:client_entity": {
     "description": {
-      "identifier": "dm:skeleton",
+      "identifier": "dm:digger",
       "min_engine_version": "1.8.0",
       "materials": {
-        "default": "skeleton"
+        "default": "zombie"
       },
       "textures": {
-        "default": "textures/entity/skeleton/skeleton"
+        "default": "textures/entity/zombie/zombie"
       },
       "geometry": {
-        "default": "geometry.skeleton.v1.8"
+        "default": "geometry.zombie.v1.8"
       },
       "scripts": {
         "pre_animation": [
@@ -29,8 +29,7 @@
         "holding": "animation.humanoid.holding",
         "attack.rotations": "animation.humanoid.attack.rotations",
         "bob": "animation.humanoid.bob",
-        "bow_and_arrow": "animation.humanoid.bow_and_arrow",
-        "skeleton_attack": "animation.skeleton.attack"
+        "zombie_attack_bare_hand": "animation.zombie.attack_bare_hand"
       },
       "animation_controllers": [
         {
@@ -52,10 +51,7 @@
           "bob": "controller.animation.humanoid.bob"
         },
         {
-          "bow_and_arrow": "controller.animation.humanoid.bow_and_arrow"
-        },
-        {
-          "skeleton_attack": "controller.animation.skeleton.attack"
+          "zombie_attack_bare_hand": "controller.animation.zombie.attack_bare_hand"
         }
       ],
       "render_controllers": [
@@ -63,7 +59,7 @@
       ],
       "enable_attachables": true,
       "spawn_egg": {
-        "texture": "spawn_egg_skeleton"
+        "texture": "spawn_egg_zombie"
       }
     }
   }

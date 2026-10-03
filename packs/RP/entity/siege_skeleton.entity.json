@@ -2,13 +2,13 @@
   "format_version": "1.8.0",
   "minecraft:client_entity": {
     "description": {
-      "identifier": "dm:skeleton",
+      "identifier": "dm:siege_skeleton",
       "min_engine_version": "1.8.0",
       "materials": {
         "default": "skeleton"
       },
       "textures": {
-        "default": "textures/entity/skeleton/skeleton"
+        "default": "textures/entity/skeleton/stray"
       },
       "geometry": {
         "default": "geometry.skeleton.v1.8"

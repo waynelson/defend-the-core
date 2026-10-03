@@ -2,7 +2,7 @@
   "format_version": "1.26.50",
   "minecraft:entity": {
     "description": {
-      "identifier": "dm:zombie",
+      "identifier": "dm:swarmer",
       "is_summonable": true,
       "is_spawnable": true
     },
@@ -17,11 +17,11 @@
         ]
       },
       "minecraft:health": {
-        "value": 20,
-        "max": 20
+        "value": 14,
+        "max": 14
       },
       "minecraft:movement": {
-        "value": 0.23
+        "value": 0.27
       },
       "minecraft:follow_range": {
         "value": 64,
@@ -87,11 +87,14 @@
         ]
       },
       "minecraft:attack": {
-        "damage": 3
+        "damage": 2
       },
       "minecraft:behavior.melee_box_attack": {
         "priority": 4,
         "track_target": true
+      },
+      "minecraft:scale": {
+        "value": 0.9
       }
     },
     "component_groups": {

@@ -83,7 +83,6 @@ export const KITS = [
     id: "fortify",
     label: "Fortify",
     items: [
-      ["minecraft:obsidian", 64],
       ["minecraft:iron_block", 32],
       ["minecraft:deepslate_bricks", 64 * 3],
       ["minecraft:polished_blackstone_bricks", 64 * 3],

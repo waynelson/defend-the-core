@@ -1,25 +1,20 @@
-// Defend the Core: M0 spike.
+// Defend the Core: command router and world events.
 //
-// Answers the spike questions in docs/M0.md. Everything is driven by
-// `/scriptevent dm:<action> <json>` from the BDS console, and every result is
-// a `[DM] {json}` line in the server log.
+// The DM drives everything with `/scriptevent dm:<action> <json>` from the
+// server console. Every message gets an `ack` or `nack` (matched by msg_id),
+// and game events are reported as `[DM] {json}` lines in the server log. See
+// README.md for the protocol.
 
 import { system, world } from "@minecraft/server";
+import { getConfig, setConfig, damagedBlocks, startBreach } from "./breach.js";
+import { clearCore, coreEntity, coreHp, coreLocation, forgetCore, labelCore, placeCore } from "./core.js";
 import { buildDepot, depotSitesLoaded, restockDepot } from "./depot.js";
+import { control, coreLost, gameStatus, setPhase, startGame, waveBegin, waveCommit, waveGroup } from "./game.js";
+import { MOBS, MODULES, TARGETING } from "./roster.js";
+import { attackers, spawnCenter, spawnOne, spawnPoints, validateSpawn } from "./spawner.js";
+import { emit, overworld, pos, round, store } from "./util.js";
 
-const CORE_PROP = "dtc:core"; // world dynamic property: JSON {x, y, z, inside}
-const ATTACKER_FAMILY = "dm_attacker";
-const TARGETING = ["core_only", "prioritized", "nearest"];
-
-let probe = { on: false, every: 20, handle: undefined };
-/** entity id -> {x, z, dist} from the previous probe sample */
-const lastSample = new Map();
-
-// ---------------------------------------------------------------- output
-
-function emit(type, data = {}) {
-  console.log(`[DM] ${JSON.stringify({ t: type, tick: system.currentTick, ...data })}`);
-}
+export const PROTOCOL = 1;
 
 function ack(msgId, data = {}) {
   emit("ack", { msg_id: msgId, ...data });
@@ -29,128 +24,55 @@ function nack(msgId, error) {
   emit("nack", { msg_id: msgId, error: String(error) });
 }
 
-const round = (n) => Math.round(n * 10) / 10;
-const pos = (v) => ({ x: round(v.x), y: round(v.y), z: round(v.z) });
+// ---------------------------------------------------------------- probe (dev)
 
-// ---------------------------------------------------------------- core
-
-function overworld() {
-  return world.getDimension("overworld");
-}
-
-function coreLocation() {
-  const raw = world.getDynamicProperty(CORE_PROP);
-  return typeof raw === "string" ? JSON.parse(raw) : undefined;
-}
-
-function coreEntity() {
-  return overworld().getEntities({ type: "dm:core" })[0];
-}
-
-function coreCenter(loc) {
-  return { x: loc.x + 0.5, y: loc.y + 0.5, z: loc.z + 0.5 };
-}
-
-function coreHp(core) {
-  const health = core?.getComponent("minecraft:health");
-  return health ? { hp: health.currentValue, max: health.effectiveMax } : undefined;
-}
-
-function labelCore(core) {
-  const hp = coreHp(core);
-  if (hp) core.nameTag = `§bCore §f${Math.ceil(hp.hp)}/${hp.max}`;
-}
-
-function placeCore(loc, inside) {
-  for (const old of overworld().getEntities({ type: "dm:core" })) old.remove();
-  // On top of the block by default; `inside` tests whether mobs can still
-  // reach an entity sitting in a solid block.
-  const at = { x: loc.x + 0.5, y: inside ? loc.y : loc.y + 1, z: loc.z + 0.5 };
-  const core = overworld().spawnEntity("dm:core", at);
-  world.setDynamicProperty(CORE_PROP, JSON.stringify({ x: loc.x, y: loc.y, z: loc.z, inside }));
-  labelCore(core);
-  emit("core_set", { block: loc, entity: pos(core.location), inside, ...coreHp(core) });
-  return core;
-}
-
-// ---------------------------------------------------------------- spawning
-
-function spawnRing(msg) {
-  const loc = coreLocation();
-  if (!loc) throw new Error("no core set");
-  const mob = msg.mob ?? "dm:zombie";
-  if (!["dm:zombie", "dm:skeleton"].includes(mob)) throw new Error(`unknown mob ${mob}`);
-  const targeting = msg.targeting ?? "prioritized";
-  if (!TARGETING.includes(targeting)) throw new Error(`targeting must be one of ${TARGETING}`);
-  const count = Math.min(Math.max(1, msg.count ?? 1), 20);
-  const dist = msg.dist ?? 40;
-  const bearing = ((msg.bearing ?? 0) * Math.PI) / 180; // 0 = north (-z), clockwise
-  const spread = msg.spread ?? 3;
-
-  const spawned = [];
-  for (let i = 0; i < count; i++) {
-    const x = Math.floor(loc.x + Math.sin(bearing) * dist + (Math.random() - 0.5) * spread);
-    const z = Math.floor(loc.z - Math.cos(bearing) * dist + (Math.random() - 0.5) * spread);
-    const top = overworld().getTopmostBlock({ x, z });
-    if (!top) throw new Error(`no ground at ${x},${z} (chunk not loaded?)`);
-    const mobEntity = overworld().spawnEntity(mob, { x: x + 0.5, y: top.location.y + 1, z: z + 0.5 });
-    mobEntity.triggerEvent(`dm:tgt_${targeting}`);
-    mobEntity.setDynamicProperty("dtc:targeting", targeting);
-    spawned.push({ id: mobEntity.id, at: pos(mobEntity.location) });
-  }
-  return { mob, targeting, spawned };
-}
-
-function attackers() {
-  return overworld().getEntities({ families: [ATTACKER_FAMILY] });
-}
-
-// ---------------------------------------------------------------- probe
+let probe = { on: false, every: 20, handle: undefined };
+const lastSample = new Map();
 
 function sampleAttackers() {
   const loc = coreLocation();
-  const center = loc && coreCenter(loc);
   const seen = new Set();
   for (const mob of attackers()) {
     seen.add(mob.id);
     const p = mob.location;
-    const dist = center ? Math.hypot(p.x - center.x, p.z - center.z) : undefined;
+    const dist = loc ? Math.hypot(p.x - loc.x - 0.5, p.z - loc.z - 0.5) : undefined;
     const prev = lastSample.get(mob.id);
-    const moved = prev ? Math.hypot(p.x - prev.x, p.z - prev.z) : undefined;
-    const closing = prev && dist !== undefined ? round(prev.dist - dist) : undefined;
     lastSample.set(mob.id, { x: p.x, z: p.z, dist });
     emit("probe", {
       id: mob.id,
       mob: mob.typeId,
-      targeting: mob.getDynamicProperty("dtc:targeting"),
       at: pos(p),
       dist: dist === undefined ? undefined : round(dist),
-      moved: moved === undefined ? undefined : round(moved),
-      closing,
+      moved: prev ? round(Math.hypot(p.x - prev.x, p.z - prev.z)) : undefined,
       hp: mob.getComponent("minecraft:health")?.currentValue,
     });
   }
   for (const id of lastSample.keys()) if (!seen.has(id)) lastSample.delete(id);
 }
 
-function setProbe(on, every) {
-  if (probe.handle !== undefined) system.clearRun(probe.handle);
-  probe = { on, every, handle: on ? system.runInterval(sampleAttackers, every) : undefined };
-}
-
 // ---------------------------------------------------------------- commands
 
 const handlers = {
-  // Upstream check: which console levels reach the BDS log.
-  ping(msg) {
-    console.info(`[DM-info] ping ${msg.msg_id ?? ""}`);
-    console.warn(`[DM-warn] ping ${msg.msg_id ?? ""}`);
-    return { pong: true, core: coreLocation() ?? null };
+  ping() {
+    return { pong: true, protocol: PROTOCOL };
   },
-  // Message length probe: send growing payloads and compare `len`.
-  echo(_msg, raw) {
-    return { len: raw.length, tail: raw.slice(-16) };
+  status() {
+    return {
+      protocol: PROTOCOL,
+      core: coreLocation() ?? null,
+      core_hp: coreHp() ?? null,
+      attackers: attackers().length,
+      damaged_blocks: damagedBlocks(),
+      config: getConfig(),
+      points: spawnPoints(),
+      ...gameStatus(),
+    };
   },
+  // The roster, modules and ranges, for the plugin's validator.
+  roster() {
+    return { protocol: PROTOCOL, mobs: MOBS, modules: MODULES, targeting: TARGETING };
+  },
+
   core_set(msg) {
     const { x, z } = msg;
     if (![x, z].every(Number.isInteger)) throw new Error("x and z must be integers");
@@ -161,16 +83,18 @@ const handlers = {
     placeCore({ x, y, z }, Boolean(msg.inside));
     return {};
   },
-  core_hp(msg) {
+  core(msg) {
     const core = coreEntity();
     if (!core) throw new Error("no core entity");
-    core.getComponent("minecraft:health").setCurrentValue(msg.hp);
+    const health = core.getComponent("minecraft:health");
+    if (msg.hp === "max") health.resetToMaxValue();
+    else if (typeof msg.hp === "number" && msg.hp > 0) health.setCurrentValue(Math.min(msg.hp, health.effectiveMax));
+    else throw new Error('hp must be a positive number or "max"');
     labelCore(core);
     return coreHp(core);
   },
   core_clear() {
-    for (const core of overworld().getEntities({ type: "dm:core" })) core.remove();
-    world.setDynamicProperty(CORE_PROP, undefined);
+    clearCore();
     return {};
   },
   tickingarea(msg) {
@@ -178,13 +102,32 @@ const handlers = {
     if (!loc) throw new Error("no core set");
     const radius = Math.min(msg.radius ?? 4, 4); // chunks; 4 is the engine max
     overworld().runCommand(`tickingarea remove dtc_core`);
-    const result = overworld().runCommand(
-      `tickingarea add circle ${loc.x} ${loc.y} ${loc.z} ${radius} dtc_core`
-    );
-    return { radius_chunks: radius, success: result.successCount };
+    system.runTimeout(() => {
+      overworld().runCommand(`tickingarea add circle ${loc.x} 0 ${loc.z} ${radius} dtc_core true`);
+    }, 2);
+    return { radius_chunks: radius };
   },
+
+  // Named spawn points: {points: {north: {x, z}, ...}} replaces the set.
+  points(msg) {
+    const points = msg.points ?? {};
+    for (const [name, p] of Object.entries(points)) {
+      if (!/^[a-z0-9_-]{1,24}$/.test(name)) throw new Error(`bad point name ${name}`);
+      if (!Number.isInteger(p?.x) || !Number.isInteger(p?.z)) throw new Error(`point ${name} needs integer x, z`);
+    }
+    if (Object.keys(points).length > 16) throw new Error("at most 16 points");
+    store("dtc:points", points);
+    return { points };
+  },
+  // Ad-hoc spawn outside a wave (testing): {mob, count, bearing|point|x/z, dist, modules, targeting}.
   spawn(msg) {
-    return spawnRing(msg);
+    const modules = validateSpawn(msg);
+    const count = Math.min(Math.max(1, msg.count ?? 1), 50);
+    const center = spawnCenter(msg);
+    let spawned = 0;
+    for (let i = 0; i < count; i++) if (spawnOne(msg, center, modules)) spawned++;
+    if (!spawned) throw new Error(`spawn point ${center.x},${center.z} is not loaded`);
+    return { mob: msg.mob, spawned, at: center, modules };
   },
   targeting(msg) {
     if (!TARGETING.includes(msg.targeting)) throw new Error(`targeting must be one of ${TARGETING}`);
@@ -195,14 +138,30 @@ const handlers = {
     }
     return { changed: mobs.length };
   },
-  probe(msg) {
-    setProbe(msg.on !== false, Math.max(5, msg.every ?? 20));
-    return { on: probe.on, every: probe.every };
+
+  // Game flow.
+  phase(msg) {
+    return setPhase(msg.phase, msg.duration_s);
   },
-  status() {
-    const core = coreEntity();
-    return { core: coreLocation() ?? null, core_hp: coreHp(core) ?? null, attackers: attackers().length };
+  wave_begin(msg) {
+    return waveBegin(msg);
   },
+  group(msg) {
+    return waveGroup(msg);
+  },
+  wave_commit(msg) {
+    return waveCommit(msg);
+  },
+  control(msg) {
+    return control(msg.cmd);
+  },
+  config(msg) {
+    return setConfig(msg);
+  },
+  kill_all() {
+    return control("kill_all");
+  },
+
   // Supply depot: {dist?: 50, x?, y?, z?, relocate?, path?: true}. Rebuilds
   // the existing depot in place; otherwise picks the flattest spot at `dist`
   // from the core unless x/z are given.
@@ -245,6 +204,7 @@ const handlers = {
         handlers.core_set({ x, z, setblock: true });
         const depot = buildDepot(coreLocation(), { dist, relocate: true });
         world.setDefaultSpawnLocation(depot.entrance);
+        setPhase("setup", undefined, true);
         emit("setup_done", { msg_id: msg.msg_id, ok: true, core: coreLocation(), depot });
       } catch (err) {
         emit("setup_done", { msg_id: msg.msg_id, ok: false, error: String(err) });
@@ -252,10 +212,13 @@ const handlers = {
     }, 20);
     return { core_at: { x, z }, waiting_for_chunks: true };
   },
-  kill_all() {
-    const mobs = attackers();
-    for (const mob of mobs) mob.remove();
-    return { removed: mobs.length };
+
+  probe(msg) {
+    if (probe.handle !== undefined) system.clearRun(probe.handle);
+    const on = msg.on !== false;
+    const every = Math.max(5, msg.every ?? 20);
+    probe = { on, every, handle: on ? system.runInterval(sampleAttackers, every) : undefined };
+    return { on, every };
   },
 };
 
@@ -264,16 +227,19 @@ system.afterEvents.scriptEventReceive.subscribe((event) => {
   const action = event.id.slice(3);
   let msg = {};
   try {
-    if (action !== "echo" && event.message.trim()) msg = JSON.parse(event.message);
+    if (event.message.trim()) msg = JSON.parse(event.message);
   } catch (err) {
     return nack(undefined, `bad json: ${err}`);
+  }
+  if (msg.v !== undefined && msg.v !== PROTOCOL) {
+    return nack(msg.msg_id, `protocol ${msg.v} not supported (this add-on speaks ${PROTOCOL})`);
   }
   const handler = handlers[action];
   if (!handler) return nack(msg.msg_id, `unknown action ${action}`);
   try {
-    ack(msg.msg_id, { action, source: event.sourceType, ...handler(msg, event.message) });
+    ack(msg.msg_id, { action, ...handler(msg) });
   } catch (err) {
-    nack(msg.msg_id, `${action}: ${err}`);
+    nack(msg.msg_id, `${action}: ${err instanceof Error ? err.message : err}`);
   }
 });
 
@@ -290,11 +256,9 @@ world.afterEvents.entityHurt.subscribe(
   (event) => {
     const src = event.damageSource;
     labelCore(event.hurtEntity);
-    emit("core_hurt", {
-      damage: event.damage,
-      cause: src.cause,
-      by: src.damagingEntity?.typeId,
-      projectile: src.damagingProjectile?.typeId,
+    emit("core_hp", {
+      damage: round(event.damage),
+      by: src.damagingEntity?.typeId ?? src.cause,
       ...coreHp(event.hurtEntity),
     });
   },
@@ -305,22 +269,18 @@ world.afterEvents.entityDie.subscribe(
   (event) => {
     const src = event.damageSource;
     if (event.deadEntity.typeId === "dm:core") {
-      world.setDynamicProperty(CORE_PROP, undefined);
-      emit("game_over", { result: "lost", by: src.damagingEntity?.typeId, cause: src.cause });
+      forgetCore();
+      coreLost();
+      emit("game_over", { result: "lost", by: src.damagingEntity?.typeId ?? src.cause });
     } else {
-      emit("attacker_died", { mob: event.deadEntity.typeId, by: src.damagingEntity?.typeId, cause: src.cause });
+      emit("attacker_died", { mob: event.deadEntity.typeId, by: src.damagingEntity?.typeId ?? src.cause });
     }
   },
-  { entityTypes: ["dm:core", "dm:zombie", "dm:skeleton"] }
+  { entityTypes: ["dm:core", ...Object.keys(MOBS)] }
 );
 
-// Verifies the siege_arrow module's hook: does the hit report the shooter?
-world.afterEvents.projectileHitBlock.subscribe((event) => {
-  if (event.source?.typeId !== "dm:skeleton") return;
-  const block = event.getBlockHit().block;
-  emit("arrow_hit_block", { block: block.typeId, at: block.location, shooter: event.source.id });
-});
-
 world.afterEvents.worldLoad.subscribe(() => {
-  emit("loaded", { core: coreLocation() ?? null });
+  startBreach();
+  startGame();
+  emit("loaded", { protocol: PROTOCOL, core: coreLocation() ?? null, ...gameStatus() });
 });

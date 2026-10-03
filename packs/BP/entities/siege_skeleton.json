@@ -2,7 +2,7 @@
   "format_version": "1.26.50",
   "minecraft:entity": {
     "description": {
-      "identifier": "dm:zombie",
+      "identifier": "dm:siege_skeleton",
       "is_summonable": true,
       "is_spawnable": true
     },
@@ -10,7 +10,7 @@
       "minecraft:type_family": {
         "family": [
           "dm_attacker",
-          "zombie",
+          "skeleton",
           "undead",
           "monster",
           "mob"
@@ -21,7 +21,7 @@
         "max": 20
       },
       "minecraft:movement": {
-        "value": 0.23
+        "value": 0.25
       },
       "minecraft:follow_range": {
         "value": 64,
@@ -67,7 +67,8 @@
       "minecraft:navigation.walk": {
         "can_walk": true,
         "is_amphibious": true,
-        "can_pass_doors": true
+        "can_pass_doors": true,
+        "avoid_water": true
       },
       "minecraft:physics": {},
       "minecraft:pushable_by_entity": {},
@@ -86,12 +87,23 @@
           }
         ]
       },
-      "minecraft:attack": {
-        "damage": 3
+      "minecraft:equipment": {
+        "table": "loot_tables/entities/skeleton_gear.json"
       },
-      "minecraft:behavior.melee_box_attack": {
-        "priority": 4,
-        "track_target": true
+      "minecraft:shooter": {
+        "def": "minecraft:arrow",
+        "sound": "bow"
+      },
+      "minecraft:behavior.ranged_attack": {
+        "priority": 0,
+        "attack_interval": {
+          "min": 3.0,
+          "max": 3.0
+        },
+        "attack_range": {
+          "min": 0.0,
+          "max": 15.0
+        }
       }
     },
     "component_groups": {
