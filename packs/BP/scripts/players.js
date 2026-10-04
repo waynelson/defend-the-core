@@ -5,6 +5,7 @@
 import { system, world } from "@minecraft/server";
 import { coreLocation } from "./core.js";
 import { coinsOf } from "./economy.js";
+import { progressOf } from "./progression.js";
 import { emit, round } from "./util.js";
 
 const SNAPSHOT_TICKS = 100;
@@ -32,8 +33,8 @@ function describePlayer(player) {
       core && player.dimension.id === "minecraft:overworld"
         ? round(Math.hypot(p.x - core.x - 0.5, p.z - core.z - 0.5))
         : undefined,
-    level: player.level,
     coins: coinsOf(player),
+    ...progressOf(player), // level, xp, next, sp
   };
 }
 

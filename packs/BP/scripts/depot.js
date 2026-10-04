@@ -237,10 +237,13 @@ function buildPavilion(b) {
 
 const BARREL_FACING = { down: 0, up: 1, north: 2, south: 3, west: 4, east: 5 };
 
-/** The Quartermaster stands on the depot's chiseled centre. */
+/** The Quartermaster stands on the depot's chiseled centre, the Arms
+ * Dealer two blocks behind him. */
 function placeVendor(b) {
   const at = b.at(0, 1, 0);
-  spawnVendor({ x: at.x + 0.5, y: at.y, z: at.z + 0.5 });
+  spawnVendor({ x: at.x + 0.5, y: at.y, z: at.z + 0.5 }, "quartermaster");
+  const back = b.at(0, 1, -2);
+  spawnVendor({ x: back.x + 0.5, y: back.y, z: back.z + 0.5 }, "elite");
 }
 
 function buildChests(b) {
@@ -355,6 +358,14 @@ function stockChest(dim, spot, errors) {
     if (left > 0 && slot >= container.size) errors.add(`${kit.id} does not fit: ${left} ${id} left out`);
   }
   return slot;
+}
+
+/** Put both vendors back where the depot keeps them. */
+export function respawnVendors() {
+  const depot = storedDepot();
+  if (!depot) throw new Error("no depot built");
+  placeVendor(new Builder(world.getDimension("overworld"), depot.center, depot.facing));
+  return { at: depot.center };
 }
 
 export function restockDepot() {

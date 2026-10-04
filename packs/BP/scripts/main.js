@@ -8,16 +8,18 @@
 import { system, world } from "@minecraft/server";
 import { getConfig, setConfig, damagedBlocks, startBreach } from "./breach.js";
 import { clearCore, coreEntity, coreHp, coreLocation, forgetCore, labelCore, placeCore } from "./core.js";
-import { buildDepot, depotSitesLoaded, restockDepot } from "./depot.js";
-import { control, coreLost, gameStatus, setPhase, startGame, waveBegin, waveCommit, waveGroup } from "./game.js";
+import { buildDepot, depotSitesLoaded, respawnVendors, restockDepot } from "./depot.js";
+import { control, coreLost, gameStatus, hooks, setPhase, startGame, waveBegin, waveCommit, waveGroup } from "./game.js";
 import { bountyOwner, defenseList, dmMine, dmPlace, startDefenses } from "./defenses.js";
 import { econ, grantCoins, payBounty, setEconomy, startEconomy } from "./economy.js";
 import { playerList, startPlayers } from "./players.js";
+import { grantProgress, killXp, progressionConfig, roundEnd, setProgression, startProgression } from "./progression.js";
+import { autoStatus, setAuto, startAuto } from "./auto.js";
 import { startRain } from "./rewards.js";
-import { SHOP, priceOf, spawnVendor, startShop } from "./shop.js";
+import { SHOP, priceOf, startShop } from "./shop.js";
 import { MOBS, MODULES, TARGETING } from "./roster.js";
 import { attackers, spawnCenter, spawnOne, spawnPoints, validateSpawn } from "./spawner.js";
-import { emit, overworld, pos, round, store, stored } from "./util.js";
+import { emit, overworld, pos, round, store } from "./util.js";
 
 export const PROTOCOL = 1;
 
@@ -70,6 +72,7 @@ const handlers = {
       damaged_blocks: damagedBlocks(),
       config: getConfig(),
       points: spawnPoints(),
+      auto: autoStatus(),
       ...gameStatus(),
     };
   },
@@ -87,12 +90,9 @@ const handlers = {
   coins(msg) {
     return grantCoins(msg);
   },
-  // Put the Quartermaster back in the middle of the depot.
+  // Put the Quartermaster and the Arms Dealer back in the depot.
   vendor() {
-    const depot = stored("dtc:depot", undefined);
-    if (!depot) throw new Error("no depot built");
-    spawnVendor({ x: depot.center.x + 0.5, y: depot.center.y + 1, z: depot.center.z + 0.5 });
-    return { at: depot.center };
+    return respawnVendors();
   },
   defenses() {
     return defenseList();
@@ -101,6 +101,21 @@ const handlers = {
   place_turret(msg) {
     if (![msg.x, msg.y, msg.z].every(Number.isInteger)) throw new Error("x, y, z must be integers");
     return dmPlace(msg);
+  },
+  // Auto DM: {on?, prep_s, intermission_s, waves, start, step, max, flyers,
+  // rewards, restock_every, wave_timeout_s}; {} reads its state.
+  auto(msg) {
+    const { msg_id: _id, v: _v, ...changes } = msg;
+    return Object.keys(changes).length ? setAuto(changes) : autoStatus();
+  },
+  // Levels: {kill_xp_mult, round_xp_base, round_xp_step, sp_per_level}; {} reads.
+  progression(msg) {
+    const { msg_id: _id, v: _v, ...changes } = msg;
+    return Object.keys(changes).length ? setProgression(changes) : progressionConfig();
+  },
+  // DM grants: {player|all, xp?, sp?, level?}
+  progress(msg) {
+    return grantProgress(msg);
   },
   // DM: lay a mine {type: blast|frost, x, y, z, owner?}
   place_mine(msg) {
@@ -317,7 +332,9 @@ world.afterEvents.entityDie.subscribe(
       emit("game_over", { result: "lost", by: src.damagingEntity?.typeId ?? src.cause });
     } else {
       emit("attacker_died", { mob: event.deadEntity.typeId, by: src.damagingEntity?.typeId ?? src.cause });
-      payBounty(event.deadEntity.typeId, bountyOwner(event.deadEntity, src.damagingEntity));
+      const earner = bountyOwner(event.deadEntity, src.damagingEntity);
+      payBounty(event.deadEntity.typeId, earner);
+      killXp(event.deadEntity.typeId, earner);
     }
   },
   { entityTypes: ["dm:core", ...Object.keys(MOBS)] }
@@ -330,5 +347,9 @@ world.afterEvents.worldLoad.subscribe(() => {
   startEconomy();
   startShop();
   startDefenses();
+  startProgression();
+  // Every cleared wave is a round survived, whoever launched it.
+  hooks.waveCleared.push((waveNo) => roundEnd(waveNo));
+  startAuto();
   emit("loaded", { protocol: PROTOCOL, core: coreLocation() ?? null, ...gameStatus() });
 });

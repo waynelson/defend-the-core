@@ -27,6 +27,18 @@ let game = { phase: "setup", wave_no: 0 };
 /** In memory only: the wave being assembled or fought. */
 let wave;
 let lastProgress = "";
+/** Listeners other modules add (the auto DM, progression). */
+export const hooks = { timerDone: [], waveCleared: [], lost: [] };
+
+function fire(list, ...args) {
+  for (const fn of list) {
+    try {
+      fn(...args);
+    } catch (err) {
+      emit("hook_error", { error: String(err) });
+    }
+  }
+}
 let pausedAt;
 
 function save() {
@@ -141,6 +153,7 @@ export function waveCommit(msg) {
   }
   wave.pending.sort((a, b) => a.at - b.at);
   wave.committed = true;
+  wave.committed_tick = now;
   game.wave_no += 1;
   setPhase("wave", undefined, false);
   return { wave_id: wave.id, total: wave.total, wave_no: game.wave_no };
@@ -192,15 +205,38 @@ function spawnDue() {
 function checkWaveDone() {
   if (!wave?.committed || wave.done || wave.pending.length) return;
   if (waveMobs().length) return;
+  completeWave();
+}
+
+function completeWave() {
   wave.done = true;
   emit("wave_cleared", { ...waveProgress() });
   payWave(game.wave_no);
-  if (wave.final) {
+  const final = wave.final;
+  if (final) {
     setPhase("won");
     emit("game_over", { result: "won" });
   } else {
     setPhase("intermission");
   }
+  fire(hooks.waveCleared, game.wave_no, final);
+}
+
+/** The running wave, for the auto DM: {wave_no, age_s} or undefined. */
+export function activeWave() {
+  if (!wave?.committed || wave.done) return undefined;
+  return { wave_no: game.wave_no, age_s: (system.currentTick - wave.committed_tick) / 20 };
+}
+
+/** Ends a wave that drags on (mobs stuck out of reach) as cleared. */
+export function finishWave() {
+  if (!wave?.committed || wave.done) return false;
+  wave.pending = [];
+  const stragglers = waveMobs();
+  for (const mob of stragglers) mob.remove();
+  emit("wave_timeout", { wave_id: wave.id, removed: stragglers.length });
+  completeWave();
+  return true;
 }
 
 export function control(cmd) {
@@ -253,6 +289,15 @@ function endWave(eventType) {
   emit(eventType, { wave_id: wave.id });
 }
 
+/** A new game: no wave, wave count back to zero, setup phase. */
+export function resetGame() {
+  endWave("wave_aborted");
+  wave = undefined;
+  game.wave_no = 0;
+  setPhase("setup", undefined, true);
+  emit("game_reset", {});
+}
+
 /** Called when the core dies; the wave's mobs stay where they are. */
 export function coreLost() {
   if (wave && !wave.done) {
@@ -260,6 +305,7 @@ export function coreLost() {
     wave.done = true;
   }
   setPhase("lost");
+  fire(hooks.lost);
 }
 
 // ---------------------------------------------------------------- loop
@@ -284,6 +330,7 @@ function hud() {
     runAll("title @a title §cTime's up!");
     runAll("playsound note.pling @a");
     emit("timer_done", { phase: game.phase });
+    fire(hooks.timerDone, game.phase);
   }
 }
 

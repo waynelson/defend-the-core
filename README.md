@@ -63,6 +63,28 @@ players, and attackers within 8 blocks fight them. Mines arm 3 seconds after
 placing. Prices, payouts, limits and the shop's open/closed state are
 DM settings (`dm:economy`).
 
+### Levels and the Arms Dealer
+
+Players earn XP for kills (bounty × 10, credited like bounties) and for every
+round survived (`round_xp_base + round_xp_step × wave`). XP is turned into
+levels at the end of each round (100 XP for level 2, then 50 more per
+level), each level brings a skill point, and name tags show the level.
+The **Arms Dealer**, beside the Quartermaster, sells high-end gear for skill
+points, each from a minimum level: Prot IV diamond armour (level 2),
+a Sharpness V netherite sword, a Power V/Infinity/Flame bow and a Multishot
+crossbow (3), totems, god apples and a Loyalty trident (4), Prot IV
+netherite armour (5) and a Density V mace (6).
+
+### Auto DM
+
+`dm:auto {"on": true}` runs the game with no DM: a prep timer, then a
+generated wave (same mix as the DM tab's generator, from the saved spawn
+points or random directions), an intermission with a supply drop, and the
+next, harder wave (`start + step × (wave − 1)`, up to `max`), until the
+final wave (`waves`; 0 = endless) is cleared or the core falls. Waves that
+drag past `wave_timeout_s` are ended as cleared. `new_game: true` starts
+again from wave 1.
+
 ### Players and chat
 
 The add-on reports who is online every 5 seconds (health, position, distance
@@ -114,6 +136,9 @@ Crafty's remote console).
 | `vendor` | `{}` | Put the Quartermaster back in the middle of the depot. |
 | `defenses` | `{}` | Everyone's turrets and mines. |
 | `place_turret`, `place_mine` | `{"type":"arrow","x":..,"y":..,"z":..,"owner"?}` | DM gift: place a turret (arrow, flak, frost) or mine (blast, frost). |
+| `auto` | `{"on":true,"waves":10,"prep_s":180,"intermission_s":90,"start":2,"step":0.7}` | Auto DM on/off and settings; `{}` reads its state. |
+| `progression` | `{"round_xp_base":50,"sp_per_level":1}` | Level settings; `{}` reads them. |
+| `progress` | `{"player":"Steve","sp":2}` or `{"all":true,"xp":100}` | Grant XP, skill points or set a level. |
 | `rain` | `{"count":12,"radius":12,"duration_s":6,"quality":2}` | Reward: key survival items fall from the sky at random spots around the core (quality 1 basic, 2 good, 3 great). |
 | `status`, `roster`, `ping` | `{}` | Full game state / mobs and module ranges / connectivity check. |
 
