@@ -5,7 +5,7 @@ describes what exists, where it lives, how to change and ship it, the rules
 of the road, and what's next. **This file is authoritative; README.md is out
 of date** (it still describes the 0.6 Quartermaster and depot).
 
-Last updated: 2026-10-04, add-on v0.7.3 on dev (beta: see Current state).
+Last updated: 2026-10-04, add-on v0.7.4 on dev (beta: see Current state).
 
 ---
 
@@ -349,7 +349,10 @@ results: `dist/stress_before.log`, `dist/stress.json` (not committed).
   custom item component (the old `playerInteractWithBlock` listener never
   fired for plain items, so nothing could be placed); players level up as
   soon as XP is enough, not at round end.
-- **Beta:** v0.7.2 until 0.7.3 is deployed (tag `v0.7.2`): world rules on load, turret arrow
+- **v0.7.4** (tag `v0.7.4`): status reports `timer_ended`, so the panel's
+  armed-wave watcher (now saved to `app/config/dm_armed.json` and resumed
+  after a panel restart) can tell a timer ran out while it was down.
+- **Beta:** v0.7.2 until 0.7.4 is deployed (tag `v0.7.2`): world rules on load, turret arrow
   cleanup, per-player HUD (level, XP, skill points, skill levels), 1,000
   starting coins / 2 SP, max mobs alive cap (150), `dm:perf`, `dm:stress`.
 - **Dev:** same as beta unless noted in later commits.

@@ -53,6 +53,9 @@ export function gameStatus() {
   return {
     phase: game.phase,
     seconds_left: secondsLeft(),
+    // The current phase's timer has run out (and nothing has changed phase
+    // since): lets a panel that missed timer_done catch up.
+    timer_ended: Boolean(game.timer_ended),
     paused: game.paused_left !== undefined,
     wave_no: game.wave_no,
     wave: wave && waveProgress(),
@@ -74,6 +77,7 @@ export function setPhase(phase, durationS, quiet = false) {
   }
   game.phase = phase;
   game.ends_tick = durationS ? system.currentTick + Math.round(durationS * 20) : undefined;
+  game.timer_ended = false;
   delete game.paused_left;
   save();
   if (!quiet) {
@@ -368,6 +372,7 @@ function hud() {
 
   if (game.ends_tick !== undefined && system.currentTick >= game.ends_tick) {
     game.ends_tick = undefined;
+    game.timer_ended = true;
     save();
     runAll("title @a title §cTime's up!");
     runAll("playsound note.pling @a");
