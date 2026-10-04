@@ -112,10 +112,11 @@ function candidates(core, dist) {
   return sites;
 }
 
-/** Whether every candidate site at `dist` from the core is loaded. */
-export function depotSitesLoaded(core, dist = 50) {
+/** Whether candidate sites at `dist` from the core are loaded. */
+export function depotSitesLoaded(core, dist = 80) {
   const dim = world.getDimension("overworld");
-  return candidates(core, dist).every((s) => siteLoaded(dim, s.x, s.z));
+  const loaded = candidates(core, dist).filter((s) => siteLoaded(dim, s.x, s.z));
+  return loaded.length >= 4;
 }
 
 function survey(dim, x, z) {
@@ -155,7 +156,7 @@ function chooseSite(dim, core, msg, existing) {
     return { x: msg.x, y, z: msg.z, score: 0 };
   }
   if (existing && !msg.relocate) return { ...existing.center, score: 0 };
-  const dist = msg.dist ?? 50;
+  const dist = msg.dist ?? 80;
   let best;
   for (const { deg, x, z } of candidates(core, dist)) {
     const site = survey(dim, x, z);

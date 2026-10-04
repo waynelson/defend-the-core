@@ -248,7 +248,7 @@ const handlers = {
     return control("kill_all");
   },
 
-  // Supply depot: {dist?: 50, x?, y?, z?, relocate?, path?: true}. Rebuilds
+  // Supply depot: {dist?: 80, x?, y?, z?, relocate?, path?: true}. Rebuilds
   // the existing depot in place; otherwise picks the flattest spot at `dist`
   // from the core unless x/z are given.
   depot(msg) {
@@ -272,7 +272,7 @@ const handlers = {
   market() {
     return buildMarket();
   },
-  // One-shot world setup for a fresh server: {x?, z?, dist?: 50}. Puts the
+  // One-shot world setup for a fresh server: {x?, z?, dist?: 80}. Puts the
   // core on a beacon at x/z (default: world spawn), keeps the area loaded,
   // builds the depot and moves world spawn to the depot entrance. Chunks load
   // asynchronously, so the result arrives later as a `setup_done` line.
@@ -288,7 +288,7 @@ const handlers = {
       const added = overworld().runCommand(`tickingarea add circle ${x} 0 ${z} 4 dtc_core true`);
       if (!added.successCount) emit("setup_progress", { msg_id: msg.msg_id, error: "tickingarea add failed" });
     }, 2);
-    const dist = msg.dist ?? 50;
+    const dist = msg.dist ?? 80;
     const poll = system.runInterval(() => {
       const timedOut = system.currentTick - started > 20 * 60;
       const coreLoaded = overworld().isChunkLoaded({ x, y: 0, z });

@@ -53,7 +53,7 @@ function survey(dim, x, z) {
 /** Near the world spawn (the depot entrance), away from the core. */
 function chooseSite(dim) {
   const spawn = world.getDefaultSpawnLocation();
-  const core = coreLocation() ?? { x: spawn.x, z: spawn.z + 50 };
+  const core = coreLocation() ?? { x: spawn.x, z: spawn.z + 80 };
   const away = Math.atan2(spawn.z - core.z, spawn.x - core.x);
   // Market Street runs straight back from the depot: keep clear of it.
   const market = marketBounds(R + 3);
