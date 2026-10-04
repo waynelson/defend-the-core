@@ -4,14 +4,14 @@
     "name": "Defend the Core Resources",
     "description": "Client entities for Defend the Core (vanilla models and textures).",
     "uuid": "7a552bf4-baa1-4e66-ac2e-434fd3f3ea10",
-    "version": [0, 7, 0],
+    "version": [0, 7, 1],
     "min_engine_version": [1, 26, 50]
   },
   "modules": [
     {
       "type": "resources",
       "uuid": "831d498b-6306-481a-a677-e660054009b1",
-      "version": [0, 7, 0]
+      "version": [0, 7, 1]
     }
   ]
 }

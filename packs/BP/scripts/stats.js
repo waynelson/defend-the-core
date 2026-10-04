@@ -154,6 +154,7 @@ export const statHooks = [];
  * level-1 kit. `wipe` also clears what they carry. */
 export function resetPlayer(player, wipe) {
   writeStats(player, freshStats());
+  for (const old of ["dtc:armor_level", "dtc:unlocks"]) player.setDynamicProperty(old, undefined);
   setCoins(player, econ().start_coins);
   resetProgress(player);
   player.removeEffect("health_boost");
@@ -168,9 +169,23 @@ export function statsOf(player) {
   const stats = readStats(player);
   if (stats && stats.game === gameNo()) return { engineer: 1, armor_ench: {}, ...stats };
   // Someone the add-on has never seen keeps what they carry; a player
-  // from an earlier game starts this one fresh.
-  resetPlayer(player, Boolean(stats));
+  // from an earlier game (or from before skills existed) starts this one
+  // fresh.
+  resetPlayer(player, Boolean(stats) || playedBefore(player));
   return readStats(player) ?? freshStats();
+}
+
+/** Whether a player without skills has played an older version: a coin
+ * balance, levels, or the old armour and unlock properties. */
+function playedBefore(player) {
+  for (const id of ["coins", "dm_level"]) {
+    try {
+      if (world.scoreboard.getObjective(id)?.hasParticipant(player)) return true;
+    } catch {
+      // no such objective
+    }
+  }
+  return ["dtc:armor_level", "dtc:unlocks"].some((key) => player.getDynamicProperty(key) !== undefined);
 }
 
 export function statOf(player, category) {
