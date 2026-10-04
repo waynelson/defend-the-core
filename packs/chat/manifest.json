@@ -4,7 +4,7 @@
     "name": "Defend the Core Chat Bridge",
     "description": "Relays player chat to the DM. Needs the Beta APIs experiment.",
     "uuid": "ee74ec8d-9fd7-4387-b1f3-41f9d5ebed8d",
-    "version": [0, 6, 0],
+    "version": [0, 7, 0],
     "min_engine_version": [1, 26, 50]
   },
   "modules": [
@@ -12,7 +12,7 @@
       "type": "script",
       "language": "javascript",
       "uuid": "ce13017a-5fd7-4bb7-b51a-f8a3b46767b2",
-      "version": [0, 6, 0],
+      "version": [0, 7, 0],
       "entry": "scripts/chat.js"
     }
   ],
