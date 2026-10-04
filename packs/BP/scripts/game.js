@@ -30,6 +30,9 @@ let lastProgress = "";
 /** Listeners other modules add (the auto DM, progression). */
 export const hooks = { timerDone: [], waveCleared: [], lost: [], newGame: [] };
 
+/** Per-player HUD lines under the game line: functions (player) -> text. */
+export const hudLines = [];
+
 function fire(list, ...args) {
   for (const fn of list) {
     try {
@@ -329,7 +332,16 @@ function hud() {
   }
   const hp = coreHp();
   if (hp && game.phase !== "setup") text = `${text ? text + "   " : ""}§bCore §f${hp.hp}/${hp.max}`;
-  if (text) runAll(`title @a actionbar ${text}`);
+  // One action bar per player: the game line, then their own lines.
+  for (const player of world.getAllPlayers()) {
+    try {
+      const lines = text ? [text] : [];
+      for (const line of hudLines) lines.push(line(player));
+      if (lines.length) player.onScreenDisplay.setActionBar(lines.join("\n"));
+    } catch {
+      // left mid-tick
+    }
+  }
 
   if (game.ends_tick !== undefined && system.currentTick >= game.ends_tick) {
     game.ends_tick = undefined;

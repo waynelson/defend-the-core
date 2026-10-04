@@ -11,7 +11,7 @@
 
 import { EntityDamageCause, EquipmentSlot, system, world } from "@minecraft/server";
 import { econ, setCoins } from "./economy.js";
-import { gameNo } from "./game.js";
+import { gameNo, hudLines } from "./game.js";
 import { giveKit, refreshArmor } from "./loadout.js";
 import { progressOf, resetProgress, spendSkillPoints } from "./progression.js";
 import { charge, menu, priceText, reopen, ROMAN, sell } from "./ui.js";
@@ -389,6 +389,23 @@ function openArmorer(player) {
   );
 }
 
+// ---------------------------------------------------------------- HUD
+
+const HUD_NAMES = { ranged: "Ranged", melee: "Melee", health: "Health", regen: "Regen", armor: "Armor", engineer: "Eng" };
+
+/** The player's own action-bar lines: level, XP and skill points to spend,
+ * then their level in each skill (gold when maxed). */
+function hudText(player) {
+  const prog = progressOf(player);
+  const stats = statsOf(player);
+  const sp = prog.sp > 0 ? `§b§l${prog.sp} skill point${prog.sp === 1 ? "" : "s"} to spend§r` : "§70 skill points";
+  const skills = CATEGORY_IDS.map((c) => {
+    const level = stats[c] ?? 1;
+    return `§7${HUD_NAMES[c]} ${level >= MAX_LEVEL ? "§6" : "§f"}${level}`;
+  }).join("  ");
+  return `§6Level ${prog.level}§7 · ${prog.xp}/${prog.next} XP · ${sp}\n${skills}`;
+}
+
 // ---------------------------------------------------------------- events
 
 /** A new game: everyone online starts again; others when they next appear. */
@@ -397,6 +414,7 @@ export function newGameForAll() {
 }
 
 export function startStats() {
+  hudLines.push(hudText);
   system.runInterval(regenerate, 20);
   world.afterEvents.entityHurt.subscribe(bonusDamage);
   world.afterEvents.playerSpawn.subscribe((event) => {
