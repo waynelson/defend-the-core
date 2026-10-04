@@ -14,8 +14,9 @@ const DEFAULTS = {
   round_xp_base: 50, // per player per round survived...
   round_xp_step: 25, // ...plus this times the wave number
   sp_per_level: 1,
+  start_sp: 2, // skill points every player starts a game with
 };
-const RANGES = { kill_xp_mult: [0, 20], round_xp_base: [0, 10000], round_xp_step: [0, 1000], sp_per_level: [0, 10] };
+const RANGES = { kill_xp_mult: [0, 20], round_xp_base: [0, 10000], round_xp_step: [0, 1000], sp_per_level: [0, 10], start_sp: [0, 20] };
 const OBJ = { xp: ["dm_xp", "XP"], level: ["dm_level", "Level"], sp: ["dm_sp", "Skill points"] };
 
 export function progressionConfig() {
@@ -82,11 +83,11 @@ export function addXp(player, amount, reason) {
   emit("xp", { name: player.name, xp: Math.round(amount), reason });
 }
 
-/** A new game: level 1, no XP or skill points. */
+/** A new game: level 1, no XP, the starting skill points. */
 export function resetProgress(player) {
   setScore(player, "level", 1);
   setScore(player, "xp", 0);
-  setScore(player, "sp", 0);
+  setScore(player, "sp", progressionConfig().start_sp);
   nameTag(player);
 }
 

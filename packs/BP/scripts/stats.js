@@ -1,7 +1,8 @@
 // Player skills: ranged, melee, health, regeneration, armour and
 // engineering, each level 1..5, raised with skill points at that skill's
 // vendor, who also sells gear of that level for coins. Every game starts
-// everyone afresh (starting coins, level 1 everything, a level-1 kit).
+// everyone afresh (starting coins and skill points, level 1 everything, a
+// level-1 kit).
 //
 // Benefits: ranged and melee add damage to hits on attackers and guards;
 // health adds max health (health boost); regeneration heals everyone over

@@ -16,7 +16,7 @@ const DEFAULTS = {
   shop_open: true,
   turret_limit: 3, // turrets per player
   mine_limit: 10, // mines per player
-  start_coins: 200, // every player's coins at the start of a game
+  start_coins: 1000, // every player's coins at the start of a game
   block_price: 4, // Mason: coins per second of block HP, per stack of 64
   repair_rate: 0.5, // coins per turret HP repaired
   prices: {}, // shop item id -> price, overrides shop.js

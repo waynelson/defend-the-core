@@ -220,15 +220,16 @@ script, run it, never hand-edit the output.** The main pack uses stable
   Biggest default wave ≈ 35 mobs.
 - **Attackers:** zombie, skeleton, swarmer, digger, sapper, siege skeleton,
   phantom, blaze, ghast (ghast targets the core only; artillery module).
-- **Fresh start each game:** 200 coins (`start_coins`), level 1 in all six
-  skills, level-1 kit (locked leather armour, stone sword, bow, 32 arrows).
+- **Fresh start each game:** 1,000 coins (`start_coins`) and 2 skill points
+  (progression `start_sp`), level 1 in all six skills, level-1 kit (locked leather armour, stone sword, bow, 32 arrows).
   Players from an older game or version are wiped on first appearance;
   never-seen players keep their (starting) items.
 - **Income:** wave pay 50 + 10 × wave to everyone; bounty per kill (swarmer
   1, zombie 2, skeleton 3, digger/siege/phantom/guards 4, sapper 5, blaze 6,
   ghast 12, captain 20): full to the final blow, 50% to everyone else
   (`bounty_share`). Tower clear: +100 coins and +150 XP each. Estimate
-  ≈ 2,250–2,400 coins per player over a default 10-wave game.
+  ≈ 2,050–2,200 coins earned per player over a default 10-wave game, on
+  top of the starting coins.
 - **Skills** (level n→n+1 costs n skill points, max 5): Ranged/Melee +25%
   damage per level; Health +2 hearts per level; Regeneration 0.25→1.2 HP/s
   for everyone; Armor tier leather→netherite (free, locked); Engineering +1
@@ -343,8 +344,10 @@ results: `dist/stress_before.log`, `dist/stress.json` (not committed).
 
 - **Beta:** v0.7.1 (tag `v0.7.1`). Natural spawns turned off by command
   (persisted in the world); the gamerule-on-load code isn't on beta yet.
-- **Dev:** `main` b581900 = v0.7.1 + world rules on load, turret arrow
-  cleanup, `dm:perf`, `dm:stress`, `tools/stress.py`. Unreleased.
+- **Dev:** `main` = v0.7.1 + world rules on load, turret arrow cleanup,
+  `dm:perf`, `dm:stress`, `tools/stress.py`, the per-player HUD (level, XP,
+  skill points, skill levels on the action bar), starting values 1,000
+  coins / 2 SP (beta still starts at 200 / 0). Unreleased.
 - **Fork:** `local/nelson-next` c0c1e3ff (team share of bounties). The
   running panel only has it after Wayne restarts the Crafty service.
 - **Untested in-game:** every vendor menu (Engineer, Mason, Provisioner,
@@ -359,7 +362,8 @@ Near term:
 1. Re-run `python tools/stress.py run turrets` to measure the arrow cleanup.
 2. Cap live attackers (≈ 150) in the auto DM / wave spawner so a big wave
    can't push the server below 15 TPS.
-3. Release v0.7.2 (world rules on load, arrow cleanup) when Wayne asks.
+3. Release v0.7.2 (world rules, arrow cleanup, HUD, starting values) when
+   Wayne asks.
 4. Rewrite README.md from this document.
 5. Show `perf` (TPS) on the DM tab next to CPU/memory.
 6. Clean up the dev stress arena (or re-run `dm:setup` on a fresh dev world).
