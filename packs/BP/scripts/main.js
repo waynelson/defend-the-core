@@ -18,6 +18,7 @@ import { autoStatus, setAuto, startAuto } from "./auto.js";
 import { refreshArmor, startLoadout } from "./loadout.js";
 import { newGameForAll, startStats } from "./stats.js";
 import { blockPrices } from "./mason.js";
+import { buildMarket } from "./market.js";
 import { raiseTower, removeTower, startTowers, towerStatus } from "./tower.js";
 import { startRain } from "./rewards.js";
 import { SHOP, priceOf, startShop } from "./shop.js";
@@ -99,7 +100,8 @@ const handlers = {
   coins(msg) {
     return grantCoins(msg);
   },
-  // Put the Quartermaster, the Mason and the skill vendors back in the depot.
+  // Put the vendors back at their shops (or in the depot before Market
+  // Street is built).
   vendor() {
     return respawnVendors();
   },
@@ -254,6 +256,11 @@ const handlers = {
   depot_restock() {
     return restockDepot();
   },
+  // Build (or rebuild) Market Street behind the depot; done when a
+  // market_done line follows.
+  market() {
+    return buildMarket();
+  },
   // One-shot world setup for a fresh server: {x?, z?, dist?: 50}. Puts the
   // core on a beacon at x/z (default: world spawn), keeps the area loaded,
   // builds the depot and moves world spawn to the depot entrance. Chunks load
@@ -378,7 +385,7 @@ world.afterEvents.worldLoad.subscribe(() => {
   // Every cleared wave is a round survived, whoever launched it.
   hooks.waveCleared.push((waveNo) => roundEnd(waveNo));
   // Locked armour is mended (or replaced, if it broke) after every wave.
-  hooks.waveCleared.push(() => world.getAllPlayers().forEach(refreshArmor));
+  hooks.waveCleared.push(() => world.getAllPlayers().forEach((p) => refreshArmor(p)));
   startAuto();
   emit("loaded", { protocol: PROTOCOL, core: coreLocation() ?? null, ...gameStatus() });
 });

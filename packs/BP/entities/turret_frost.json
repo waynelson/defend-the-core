@@ -6,6 +6,105 @@
       "is_summonable": true,
       "is_spawnable": false
     },
+    "component_groups": {
+      "dtc:tier_1": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 1,
+          "must_see": true,
+          "reselect_targets": true,
+          "within_radius": 14,
+          "target_search_height": 64,
+          "entity_types": [
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "dm_attacker"
+              },
+              "max_dist": 14,
+              "must_see": true
+            }
+          ]
+        },
+        "minecraft:behavior.ranged_attack": {
+          "priority": 0,
+          "attack_interval": {
+            "min": 1.0,
+            "max": 1.0
+          },
+          "attack_range": {
+            "min": 0.0,
+            "max": 14.0
+          }
+        }
+      },
+      "dtc:tier_2": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 1,
+          "must_see": true,
+          "reselect_targets": true,
+          "within_radius": 18,
+          "target_search_height": 64,
+          "entity_types": [
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "dm_attacker"
+              },
+              "max_dist": 18,
+              "must_see": true
+            }
+          ]
+        },
+        "minecraft:behavior.ranged_attack": {
+          "priority": 0,
+          "attack_interval": {
+            "min": 0.75,
+            "max": 0.75
+          },
+          "attack_range": {
+            "min": 0.0,
+            "max": 18.0
+          },
+          "burst_shots": 2,
+          "burst_interval": 0.2
+        }
+      },
+      "dtc:tier_3": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 1,
+          "must_see": true,
+          "reselect_targets": true,
+          "within_radius": 21,
+          "target_search_height": 64,
+          "entity_types": [
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "dm_attacker"
+              },
+              "max_dist": 21,
+              "must_see": true
+            }
+          ]
+        },
+        "minecraft:behavior.ranged_attack": {
+          "priority": 0,
+          "attack_interval": {
+            "min": 0.55,
+            "max": 0.55
+          },
+          "attack_range": {
+            "min": 0.0,
+            "max": 21.0
+          },
+          "burst_shots": 3,
+          "burst_interval": 0.2
+        }
+      }
+    },
     "components": {
       "minecraft:type_family": {
         "family": [
@@ -14,8 +113,8 @@
         ]
       },
       "minecraft:health": {
-        "value": 30,
-        "max": 30
+        "value": 400,
+        "max": 400
       },
       "minecraft:collision_box": {
         "width": 1.0,
@@ -72,38 +171,74 @@
           }
         ]
       },
-      "minecraft:behavior.nearest_attackable_target": {
-        "priority": 1,
-        "must_see": true,
-        "reselect_targets": true,
-        "within_radius": 14,
-        "target_search_height": 64,
-        "entity_types": [
-          {
-            "filters": {
-              "test": "is_family",
-              "subject": "other",
-              "value": "dm_attacker"
-            },
-            "max_dist": 14,
-            "must_see": true
-          }
-        ]
-      },
-      "minecraft:behavior.ranged_attack": {
-        "priority": 0,
-        "attack_interval": {
-          "min": 1.0,
-          "max": 1.0
-        },
-        "attack_range": {
-          "min": 0.0,
-          "max": 14.0
-        }
-      },
       "minecraft:shooter": {
         "def": "minecraft:snowball"
+      },
+      "minecraft:interact": {
+        "interactions": [
+          {
+            "on_interact": {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "player"
+              },
+              "event": "dm:talk",
+              "target": "self"
+            },
+            "interact_text": "action.interact.dtc_turret"
+          }
+        ]
       }
+    },
+    "events": {
+      "dtc:tier_1": {
+        "remove": {
+          "component_groups": [
+            "dtc:tier_2",
+            "dtc:tier_3"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dtc:tier_1"
+          ]
+        }
+      },
+      "dtc:tier_2": {
+        "remove": {
+          "component_groups": [
+            "dtc:tier_1",
+            "dtc:tier_3"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dtc:tier_2"
+          ]
+        }
+      },
+      "dtc:tier_3": {
+        "remove": {
+          "component_groups": [
+            "dtc:tier_1",
+            "dtc:tier_2"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dtc:tier_3"
+          ]
+        }
+      },
+      "minecraft:entity_spawned": {
+        "add": {
+          "component_groups": [
+            "dtc:tier_1"
+          ]
+        }
+      },
+      "dm:talk": {}
     }
   }
 }

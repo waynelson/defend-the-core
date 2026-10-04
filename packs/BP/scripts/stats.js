@@ -1,19 +1,20 @@
-// Player skills: ranged, melee, health, regeneration and armour, each level
-// 1..5, raised with skill points at that skill's vendor, who also sells gear
-// of that level for coins. Every game starts everyone afresh (200 coins,
-// level 1 everything, a level-1 kit).
+// Player skills: ranged, melee, health, regeneration, armour and
+// engineering, each level 1..5, raised with skill points at that skill's
+// vendor, who also sells gear of that level for coins. Every game starts
+// everyone afresh (starting coins, level 1 everything, a level-1 kit).
 //
 // Benefits: ranged and melee add damage to hits on attackers and guards;
 // health adds max health (health boost); regeneration heals everyone over
 // time; armour sets the tier of the free armour locked to each player
-// (loadout.js).
+// (loadout.js), which the Armorer enchants for coins; engineering raises
+// turret and mine limits and turret durability (defenses.js).
 
-import { EnchantmentType, EntityDamageCause, EquipmentSlot, ItemStack, system, world } from "@minecraft/server";
-import { ActionFormData } from "@minecraft/server-ui";
-import { addCoins, coinsOf, econ, setCoins } from "./economy.js";
+import { EntityDamageCause, EquipmentSlot, system, world } from "@minecraft/server";
+import { econ, setCoins } from "./economy.js";
 import { gameNo } from "./game.js";
 import { giveKit, refreshArmor } from "./loadout.js";
 import { progressOf, resetProgress, spendSkillPoints } from "./progression.js";
+import { charge, menu, priceText, reopen, ROMAN, sell } from "./ui.js";
 import { emit } from "./util.js";
 
 export const MAX_LEVEL = 5;
@@ -21,8 +22,16 @@ const RANGED_BONUS = 0.25; // extra damage per level above 1
 const MELEE_BONUS = 0.25;
 const REGEN_PER_SECOND = [0.25, 0.4, 0.6, 0.85, 1.2]; // by regeneration level
 const ARMOR_NAMES = ["Leather", "Chainmail", "Iron", "Diamond", "Netherite"];
+export const TURRETS_PER_LEVEL = 1;
+export const MINES_PER_LEVEL = 3;
+export const DURABILITY_PER_LEVEL = 0.1;
 
-const POTION = { healing: 21, strong_healing: 22, regeneration: 28, long_regeneration: 29, strong_regeneration: 30 };
+const POTION = {
+  healing: 21, strong_healing: 22,
+  regeneration: 28, long_regeneration: 29, strong_regeneration: 30,
+  swiftness: 14, long_fire_resistance: 13,
+  long_strength: 32, strong_strength: 33, slow_falling: 40, turtle_master: 37,
+};
 
 // Items: [label, min level, price, item id, count, enchants | {potion}]
 export const CATEGORIES = {
@@ -60,17 +69,17 @@ export const CATEGORIES = {
       ["Mace (Density V)", 5, 450, "minecraft:mace", 1, { density: 5 }],
     ],
   },
+  // The Healer heals now; the Alchemist heals over time and sells buffs.
   health: {
     label: "Health", vendor: "Healer",
     benefit: (l) => `+${(l - 1) * 2} hearts of max health`,
     items: [
-      ["Bread x8", 1, 10, "minecraft:bread", 8],
-      ["Cooked Beef x8", 1, 20, "minecraft:cooked_beef", 8],
-      ["Golden Carrots x8", 2, 40, "minecraft:golden_carrot", 8],
-      ["Potion of Healing", 2, 30, "minecraft:potion", 1, { potion: POTION.healing }],
-      ["Golden Apple", 3, 60, "minecraft:golden_apple", 1],
-      ["Splash Potion of Healing", 3, 40, "minecraft:splash_potion", 1, { potion: POTION.healing }],
-      ["Potion of Healing II", 4, 50, "minecraft:potion", 1, { potion: POTION.strong_healing }],
+      ["Golden Carrots x8", 1, 30, "minecraft:golden_carrot", 8],
+      ["Potion of Healing", 1, 30, "minecraft:potion", 1, { potion: POTION.healing }],
+      ["Golden Apple", 2, 60, "minecraft:golden_apple", 1],
+      ["Splash Potion of Healing", 2, 40, "minecraft:splash_potion", 1, { potion: POTION.healing }],
+      ["Potion of Healing II", 3, 50, "minecraft:potion", 1, { potion: POTION.strong_healing }],
+      ["Splash Potion of Healing II", 4, 65, "minecraft:splash_potion", 1, { potion: POTION.strong_healing }],
       ["Golden Apples x3", 4, 160, "minecraft:golden_apple", 3],
       ["Enchanted Golden Apple", 5, 300, "minecraft:enchanted_golden_apple", 1],
       ["Totem of Undying", 5, 400, "minecraft:totem_of_undying", 1],
@@ -82,18 +91,29 @@ export const CATEGORIES = {
     items: [
       ["Milk Bucket", 1, 15, "minecraft:milk_bucket", 1],
       ["Potion of Regeneration", 1, 40, "minecraft:potion", 1, { potion: POTION.regeneration }],
+      ["Potion of Swiftness", 1, 30, "minecraft:potion", 1, { potion: POTION.swiftness }],
       ["Potion of Regeneration (long)", 2, 70, "minecraft:potion", 1, { potion: POTION.long_regeneration }],
+      ["Potion of Fire Resistance", 2, 40, "minecraft:potion", 1, { potion: POTION.long_fire_resistance }],
+      ["Potion of Slow Falling", 2, 30, "minecraft:potion", 1, { potion: POTION.slow_falling }],
+      ["Potion of Strength", 3, 70, "minecraft:potion", 1, { potion: POTION.long_strength }],
       ["Splash Potion of Regeneration", 3, 80, "minecraft:splash_potion", 1, { potion: POTION.regeneration }],
       ["Potion of Regeneration II", 3, 100, "minecraft:potion", 1, { potion: POTION.strong_regeneration }],
-      ["Golden Apples x2", 4, 110, "minecraft:golden_apple", 2],
+      ["Potion of Strength II", 4, 120, "minecraft:potion", 1, { potion: POTION.strong_strength }],
       ["Splash Potion of Regeneration II", 4, 130, "minecraft:splash_potion", 1, { potion: POTION.strong_regeneration }],
-      ["Enchanted Golden Apple", 5, 300, "minecraft:enchanted_golden_apple", 1],
+      ["Potion of the Turtle Master", 5, 150, "minecraft:potion", 1, { potion: POTION.turtle_master }],
     ],
   },
   armor: {
     label: "Armor", vendor: "Armorer",
     benefit: (l) => `wear ${ARMOR_NAMES[l - 1].toLowerCase()} armour (free, locked to you)`,
-    items: [], // armour is never sold: it comes with the level
+    items: [], // armour comes with the level; the Armorer sells enchantments
+  },
+  engineer: {
+    label: "Engineering", vendor: "Engineer",
+    benefit: (l) =>
+      `+${(l - 1) * TURRETS_PER_LEVEL} turrets, +${(l - 1) * MINES_PER_LEVEL} mines, ` +
+      `+${Math.round((l - 1) * DURABILITY_PER_LEVEL * 100)}% turret durability`,
+    items: [], // the Engineer's stock is in shop.js
   },
 };
 export const CATEGORY_IDS = Object.keys(CATEGORIES);
@@ -101,7 +121,7 @@ export const CATEGORY_IDS = Object.keys(CATEGORIES);
 // ---------------------------------------------------------------- state
 
 function freshStats() {
-  return { game: gameNo(), ...Object.fromEntries(CATEGORY_IDS.map((c) => [c, 1])) };
+  return { game: gameNo(), ...Object.fromEntries(CATEGORY_IDS.map((c) => [c, 1])), armor_ench: {} };
 }
 
 function readStats(player) {
@@ -126,8 +146,12 @@ function clearInventory(player) {
   }
 }
 
-/** Start a player on this game: 200 coins (or the DM's setting), level 1
- * everything, a level-1 kit. `wipe` also clears what they carry. */
+/** Called with (player, category) when a skill changes ("reset" for a new
+ * game). */
+export const statHooks = [];
+
+/** Start a player on this game: starting coins, level 1 everything, a
+ * level-1 kit. `wipe` also clears what they carry. */
 export function resetPlayer(player, wipe) {
   writeStats(player, freshStats());
   setCoins(player, econ().start_coins);
@@ -135,13 +159,14 @@ export function resetPlayer(player, wipe) {
   player.removeEffect("health_boost");
   if (wipe) clearInventory(player);
   giveKit(player);
+  statHooks.forEach((fn) => fn(player, "reset"));
   emit("player_reset", { name: player.name, wiped: wipe });
 }
 
 /** The player's skills, starting them on this game if they're not yet. */
 export function statsOf(player) {
   const stats = readStats(player);
-  if (stats && stats.game === gameNo()) return stats;
+  if (stats && stats.game === gameNo()) return { engineer: 1, armor_ench: {}, ...stats };
   // Someone the add-on has never seen keeps what they carry; a player
   // from an earlier game starts this one fresh.
   resetPlayer(player, Boolean(stats));
@@ -156,8 +181,21 @@ export function setStat(player, category, level) {
   const stats = statsOf(player);
   stats[category] = Math.min(Math.max(Math.round(level), 1), MAX_LEVEL);
   writeStats(player, stats);
-  if (category === "armor") refreshArmor(player);
+  if (category === "armor") refreshArmor(player, true);
   if (category === "health") applyHealth(player, true);
+  statHooks.forEach((fn) => fn(player, category));
+}
+
+/** The Armorer's work on a player's armour. */
+export function armorEnchantsOf(player) {
+  return { style: "protection", protection: 0, thorns: 0, feather_falling: 0, ...statsOf(player).armor_ench };
+}
+
+function setArmorEnchants(player, ench) {
+  const stats = statsOf(player);
+  stats.armor_ench = ench;
+  writeStats(player, stats);
+  refreshArmor(player, true);
 }
 
 /** Spend skill points on the next level of a skill. */
@@ -226,69 +264,114 @@ function bonusDamage(event) {
 
 // ---------------------------------------------------------------- vendors
 
-function giveItem(player, entry) {
-  const [, , , id, count, extra] = entry;
-  if (extra?.potion !== undefined) {
-    player.dimension.runCommand(`give "${player.name}" ${id} ${count} ${extra.potion}`);
-    return;
-  }
-  const item = new ItemStack(id, count);
-  if (extra) {
-    const enchantable = item.getComponent("minecraft:enchantable");
-    for (const [name, lvl] of Object.entries(extra)) {
-      try {
-        enchantable?.addEnchantment({ type: new EnchantmentType(name), level: lvl });
-      } catch {
-        // not valid on this item: skip
-      }
-    }
-  }
-  const left = player.getComponent("minecraft:inventory")?.container?.addItem(item);
-  if (left) player.dimension.spawnItem(left, player.location);
-}
-
-function buy(player, category, entry) {
-  const [label, minLevel, price] = entry;
-  const level = statOf(player, category);
-  if (level < minLevel) return player.sendMessage(`§c${label} needs ${CATEGORIES[category].label} level ${minLevel}.`);
-  const coins = coinsOf(player);
-  if (coins < price) return player.sendMessage(`§cYou need ${price - coins} more coins for ${label}.`);
-  giveItem(player, entry);
-  const balance = addCoins(player, -price, `bought ${label}`);
-  emit("purchase", { name: player.name, item: label, price, balance });
-  player.sendMessage(`§aBought ${label}§r for ${price} coins. §6${balance} coins§r left.`);
-}
-
-export function openSkillShop(player, category, retried = false) {
-  if (!econ().shop_open) return player.sendMessage(`§cThe ${CATEGORIES[category].vendor} is closed right now.`);
+/** The train button every skill vendor starts with. */
+export function trainButton(player, category, again) {
   const def = CATEGORIES[category];
   const level = statOf(player, category);
-  const prog = progressOf(player);
-  const coins = coinsOf(player);
-  const form = new ActionFormData()
-    .title(`§l${def.vendor}`)
-    .body(
-      `${def.label} level §6${level}§r: ${def.benefit(level)}.\n` +
-        `§b${prog.sp} skill points§r · §6${coins} coins§r`
-    );
-  form.button(
-    level < MAX_LEVEL
-      ? `Train ${def.label} to level ${level + 1}\n${prog.sp >= level ? "§2" : "§4"}${level} skill point${level === 1 ? "" : "s"}: ${def.benefit(level + 1)}`
-      : `${def.label} level ${MAX_LEVEL}\n§8maxed out`
-  );
-  for (const [label, minLevel, price] of def.items) {
-    form.button(`${label}\n${level < minLevel ? `§8needs level ${minLevel}` : `${coins >= price ? "§2" : "§4"}${price} coins`}`);
+  const sp = progressOf(player).sp;
+  return {
+    text:
+      level < MAX_LEVEL
+        ? `Train ${def.label} to level ${level + 1}\n${sp >= level ? "§2" : "§4"}${level} skill point${level === 1 ? "" : "s"}: ${def.benefit(level + 1)}`
+        : `${def.label} level ${MAX_LEVEL}\n§8maxed out`,
+    run: () => {
+      player.sendMessage(train(player, category).message);
+      reopen(again);
+    },
+  };
+}
+
+/** The top of a skill vendor's menu: the skill's level and points. */
+export function skillBody(player, category) {
+  const def = CATEGORIES[category];
+  const level = statOf(player, category);
+  return `${def.label} level §6${level}§r: ${def.benefit(level)}.\n§b${progressOf(player).sp} skill points§r`;
+}
+
+export function openSkillShop(player, category) {
+  const def = CATEGORIES[category];
+  if (!econ().shop_open) return player.sendMessage(`§cThe ${def.vendor} is closed right now.`);
+  if (category === "armor") return openArmorer(player);
+  const level = statOf(player, category);
+  const again = () => openSkillShop(player, category);
+  const buttons = [trainButton(player, category, again)];
+  for (const [label, minLevel, price, id, count, extra] of def.items) {
+    buttons.push({
+      text: `${label}\n${level < minLevel ? `§8needs level ${minLevel}` : priceText(player, price)}`,
+      run: () => {
+        if (statOf(player, category) < minLevel) player.sendMessage(`§c${label} needs ${def.label} level ${minLevel}.`);
+        else sell(player, [label, id, count, price, extra]);
+        reopen(again);
+      },
+    });
   }
-  form.show(player).then((response) => {
-    if (response.canceled && String(response.cancelationReason) === "UserBusy" && !retried) {
-      system.runTimeout(() => openSkillShop(player, category, true), 10);
-      return;
+  menu(player, `§l${def.vendor}`, skillBody(player, category), buttons);
+}
+
+// The Armorer: enchantments on the locked armour, gated by Armor level.
+export const STYLES = {
+  protection: "Protection",
+  blast_protection: "Blast Protection",
+  projectile_protection: "Projectile Protection",
+};
+/** @type {[string, string | null, number, number[], number[]][]} */
+const UPGRADES = [
+  // [key, label (null: the protection style), max, price of each next
+  // level, Armor level each next level needs]
+  ["protection", null, 4, [60, 120, 200, 320], [1, 2, 3, 4]],
+  ["thorns", "Thorns", 3, [80, 160, 260], [2, 3, 4]],
+  ["feather_falling", "Feather Falling", 4, [30, 60, 90, 120], [1, 1, 2, 3]],
+];
+const STYLE_SWITCH_PRICE = 50;
+
+function openArmorer(player) {
+  const again = () => openArmorer(player);
+  const level = statOf(player, "armor");
+  const ench = armorEnchantsOf(player);
+  const buttons = [trainButton(player, "armor", again)];
+  for (const [key, fixedLabel, max, prices, needs] of UPGRADES) {
+    const label = fixedLabel ?? STYLES[ench.style];
+    const have = ench[key];
+    if (have >= max) {
+      buttons.push({ text: `${label} ${ROMAN[have]}\n§8maxed out`, run: () => reopen(again) });
+      continue;
     }
-    if (response.canceled || response.selection === undefined) return;
-    if (response.selection === 0) player.sendMessage(train(player, category).message);
-    else buy(player, category, def.items[response.selection - 1]);
-    system.runTimeout(() => openSkillShop(player, category), 2);
-  });
+    const price = prices[have];
+    const need = needs[have];
+    const name = `${label} ${ROMAN[have + 1]}`;
+    buttons.push({
+      text: `${name}\n${level < need ? `§8needs Armor level ${need}` : priceText(player, price)}`,
+      run: () => {
+        if (statOf(player, "armor") < need) player.sendMessage(`§c${name} needs Armor level ${need}.`);
+        else if (charge(player, price, `${name} on your armour`)) {
+          setArmorEnchants(player, { ...ench, [key]: have + 1 });
+          emit("armor_enchanted", { name: player.name, enchant: key === "protection" ? ench.style : key, level: have + 1 });
+        }
+        reopen(again);
+      },
+    });
+  }
+  for (const [style, label] of Object.entries(STYLES)) {
+    if (style === ench.style) continue;
+    buttons.push({
+      text: `Switch to ${label}\n${priceText(player, STYLE_SWITCH_PRICE)} §8(keeps the level)`,
+      run: () => {
+        if (charge(player, STYLE_SWITCH_PRICE, `${label} on your armour`)) setArmorEnchants(player, { ...ench, style });
+        reopen(again);
+      },
+    });
+  }
+  const current = [
+    ench.protection ? `${STYLES[ench.style]} ${ROMAN[ench.protection]}` : "",
+    ench.thorns ? `Thorns ${ROMAN[ench.thorns]}` : "",
+    ench.feather_falling ? `Feather Falling ${ROMAN[ench.feather_falling]}` : "",
+  ].filter(Boolean);
+  menu(
+    player,
+    "§lArmorer",
+    `${skillBody(player, "armor")}\nYour armour: ${current.join(", ") || "no enchantments"}.\n§7One kind of protection at a time.`,
+    buttons
+  );
 }
 
 // ---------------------------------------------------------------- events

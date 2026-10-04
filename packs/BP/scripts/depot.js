@@ -1,10 +1,11 @@
-// Supply depot: an open spruce pavilion with one labelled chest per starter
+// Supply depot: an open spruce pavilion with a labelled barrel per free
 // kit, built on the flattest dry spot at a set distance from the core, with a
-// path back to the core. Built and restocked by the DM (`dm:depot`,
-// `dm:depot_restock`).
+// path back to the core and Market Street (market.js) out the back. Built
+// and restocked by the DM (`dm:depot`, `dm:depot_restock`).
 
 import { BlockPermutation, BlockVolume, EnchantmentType, ItemStack, SignSide, world } from "@minecraft/server";
 import { COLUMNS, KITS } from "./kits.js";
+import { buildMarket, marketBuilt, respawnMarketVendors } from "./market.js";
 import { spawnVendor } from "./shop.js";
 
 const DEPOT_PROP = "dtc:depot"; // JSON {center, facing, chests: [{x, y, z, kit}]}
@@ -29,7 +30,7 @@ function dirName([x, z]) {
   return Object.keys(DIR_VECTORS).find((k) => DIR_VECTORS[k][0] === x && DIR_VECTORS[k][1] === z);
 }
 
-class Builder {
+export class Builder {
   constructor(dimension, center, facing) {
     this.dim = dimension;
     this.center = center; // {x, y, z}; y is the floor level
@@ -203,7 +204,9 @@ function buildPavilion(b) {
   for (const [x, z] of [[-5, -5], [5, -5], [-5, 5], [5, 5]]) {
     b.fill(x, 1, z, x, 4, z, SPRUCE_LOG, { pillar_axis: "y" });
   }
-  b.fill(-4, 1, -5, 4, 1, -5, FENCE);
+  // The back fence has a gap: the way through to Market Street.
+  b.fill(-4, 1, -5, -2, 1, -5, FENCE);
+  b.fill(2, 1, -5, 4, 1, -5, FENCE);
   b.fill(-5, 1, -4, -5, 1, 4, FENCE);
   b.fill(5, 1, -4, 5, 1, 4, FENCE);
   b.fill(-5, 5, -5, 5, 5, -5, SPRUCE_LOG, { pillar_axis: b.axis("x") });
@@ -232,29 +235,39 @@ function buildPavilion(b) {
   b.set(4, 1, 4, "minecraft:furnace", { "minecraft:cardinal_direction": b.dir("west") });
 
   // Beside the path: a path block under a sign turns back into dirt.
-  b.sign(-2, 1, HALF,"§lSupply Depot§r\nDefend the Core\n§7alpha kits", "south");
+  b.sign(-2, 1, HALF, "§lSupply Depot§r\nfree basics\n§7shops out the back", "south");
 }
 
 const BARREL_FACING = { down: 0, up: 1, north: 2, south: 3, west: 4, east: 5 };
 
-// Where the vendors stand (local): the Quartermaster in the middle, the
-// five skill vendors around him, clear of the barrel columns.
+// Until Market Street is built the vendors crowd into the pavilion (local
+// spots, clear of the barrels and the way out the back).
 /** @type {[string, number, number][]} */
 const VENDOR_SPOTS = [
-  ["quartermaster", 0, 0],
+  ["engineer", 0, 0],
   ["mason", 0, 2],
+  ["provisioner", -2, 3],
   ["ranged", -2, -2],
   ["melee", 2, -2],
-  ["armor", 0, -2],
+  ["armor", 2, 3],
   ["health", -2, 1],
   ["regen", 2, 1],
 ];
 
 function placeVendor(b) {
+  if (marketBuilt()) return respawnMarketVendors();
   for (const [kind, x, z] of VENDOR_SPOTS) {
     const at = b.at(x, 1, z);
     spawnVendor({ x: at.x + 0.5, y: at.y, z: at.z + 0.5 }, kind);
   }
+  return { where: "depot" };
+}
+
+/** A builder in the depot's frame (for Market Street). */
+export function depotBuilder() {
+  const depot = storedDepot();
+  if (!depot) throw new Error("no depot built");
+  return new Builder(world.getDimension("overworld"), depot.center, depot.facing);
 }
 
 function buildChests(b) {
@@ -371,12 +384,11 @@ function stockChest(dim, spot, errors) {
   return slot;
 }
 
-/** Put both vendors back where the depot keeps them. */
+/** Put the vendors back: at their shops, or in the pavilion if there's no
+ * Market Street yet. */
 export function respawnVendors() {
-  const depot = storedDepot();
-  if (!depot) throw new Error("no depot built");
-  placeVendor(new Builder(world.getDimension("overworld"), depot.center, depot.facing));
-  return { at: depot.center };
+  const b = depotBuilder();
+  return { at: b.center, ...placeVendor(b) };
 }
 
 export function restockDepot() {
@@ -424,6 +436,7 @@ export function buildDepot(core, msg) {
   if (moving) {
     demolish(dim, existing);
     existing = undefined;
+    world.setDynamicProperty("dtc:market", undefined); // left behind; build it again
   }
   const site = chooseSite(dim, core, msg, existing);
   if (existing && site.y !== existing.center.y) demolish(dim, existing);
@@ -431,9 +444,11 @@ export function buildDepot(core, msg) {
   const b = new Builder(dim, { x: site.x, y: site.y, z: site.z }, facing);
   buildPavilion(b);
   const chests = buildChests(b);
-  placeVendor(b);
+  // Market Street places the vendors itself.
+  if (msg.market === false) placeVendor(b);
   const path = msg.path === false ? 0 : buildPath(b, core);
   world.setDynamicProperty(DEPOT_PROP, JSON.stringify({ center: b.center, facing, chests }));
+  const market = msg.market === false ? undefined : buildMarket();
   const stock = restockDepot();
   return {
     center: b.center,
@@ -442,6 +457,7 @@ export function buildDepot(core, msg) {
     facing,
     unevenness: site.score,
     path_blocks: path,
+    market,
     ...stock,
     errors: [...b.errors, ...stock.errors],
   };

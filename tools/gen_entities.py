@@ -420,7 +420,8 @@ def main():
         lines.append(f"item.spawn_egg.entity.dm:{name}.name=Spawn {mob['name']}")
     for name, turret in TURRETS.items():
         lines.append(f"entity.dm:{name}.name={turret['name']}")
-    lines.append("entity.dm:vendor.name=Quartermaster")
+    lines.append("entity.dm:vendor.name=Vendor")
+    lines.append("action.interact.dtc_turret=Repair / Upgrade")
     for item_id, item in ITEMS.items():
         lines.append(f"item.dm:{item_id}={item['name']}")
     lang.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -471,15 +472,55 @@ NO_PLAYER_DAMAGE = {
 }
 
 
+# Upgrade tiers (scripts/defenses.js triggers dtc:tier_N): longer reach,
+# faster fire, bigger bursts. Health is set by the script (tier and the
+# owner's Engineering), within MAX_TURRET_HEALTH.
+TIERS = {1: (1.0, 1.0, 0), 2: (1.25, 0.75, 1), 3: (1.5, 0.55, 2)}  # range, interval, extra burst
+MAX_TURRET_HEALTH = 400
+
+
+def turret_tier(spec, tier):
+    range_mult, interval_mult, extra = TIERS[tier]
+    reach = round(spec["range"] * range_mult)
+    burst = spec.get("burst", 1) + extra
+    lo, hi = spec["interval"]
+    return {
+        "minecraft:behavior.nearest_attackable_target": {
+            "priority": 1,
+            "must_see": True,
+            "reselect_targets": True,
+            "within_radius": reach,
+            "target_search_height": 64,
+            "entity_types": [target_entry(spec["targets"], reach, True)],
+        },
+        "minecraft:behavior.ranged_attack": {
+            "priority": 0,
+            "attack_interval": {"min": round(lo * interval_mult, 2), "max": round(hi * interval_mult, 2)},
+            "attack_range": {"min": 0.0, "max": float(reach)},
+            **({"burst_shots": burst, "burst_interval": 0.2} if burst > 1 else {}),
+        },
+    }
+
+
 def turret(name, spec):
-    reach = spec["range"]
+    groups = {f"dtc:tier_{n}": turret_tier(spec, n) for n in TIERS}
+    events = {
+        f"dtc:tier_{n}": {
+            "remove": {"component_groups": [g for g in groups if g != f"dtc:tier_{n}"]},
+            "add": {"component_groups": [f"dtc:tier_{n}"]},
+        }
+        for n in TIERS
+    }
+    events["minecraft:entity_spawned"] = {"add": {"component_groups": ["dtc:tier_1"]}}
+    events["dm:talk"] = {}
     return {
         "format_version": "1.26.50",
         "minecraft:entity": {
             "description": {"identifier": f"dm:{name}", "is_summonable": True, "is_spawnable": False},
+            "component_groups": groups,
             "components": {
                 "minecraft:type_family": {"family": ["dm_turret", "inanimate"]},
-                "minecraft:health": {"value": spec["health"], "max": spec["health"]},
+                "minecraft:health": {"value": MAX_TURRET_HEALTH, "max": MAX_TURRET_HEALTH},
                 "minecraft:collision_box": {"width": 1.0, "height": 1.0},
                 "minecraft:physics": {},
                 "minecraft:knockback_resistance": {"value": 1.0},
@@ -496,22 +537,22 @@ def turret(name, spec):
                         {"deals_damage": "yes"},
                     ]
                 },
-                "minecraft:behavior.nearest_attackable_target": {
-                    "priority": 1,
-                    "must_see": True,
-                    "reselect_targets": True,
-                    "within_radius": reach,
-                    "target_search_height": 64,
-                    "entity_types": [target_entry(spec["targets"], reach, True)],
-                },
-                "minecraft:behavior.ranged_attack": {
-                    "priority": 0,
-                    "attack_interval": {"min": spec["interval"][0], "max": spec["interval"][1]},
-                    "attack_range": {"min": 0.0, "max": float(reach)},
-                    **({"burst_shots": spec["burst"], "burst_interval": 0.2} if spec.get("burst") else {}),
-                },
                 "minecraft:shooter": {"def": spec["shoots"]},
+                # Talking opens its repair / upgrade menu (scripts/defenses.js).
+                "minecraft:interact": {
+                    "interactions": [
+                        {
+                            "on_interact": {
+                                "filters": {"test": "is_family", "subject": "other", "value": "player"},
+                                "event": "dm:talk",
+                                "target": "self",
+                            },
+                            "interact_text": "action.interact.dtc_turret",
+                        }
+                    ]
+                },
             },
+            "events": events,
         },
     }
 

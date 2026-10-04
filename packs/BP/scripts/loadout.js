@@ -2,8 +2,8 @@
 // to them), a stone sword, a bow and arrows. Respawns top it up without
 // replacing weapons they bought.
 
-import { EquipmentSlot, ItemLockMode, ItemStack, world } from "@minecraft/server";
-import { statOf } from "./stats.js";
+import { EnchantmentType, EquipmentSlot, ItemLockMode, ItemStack, world } from "@minecraft/server";
+import { armorEnchantsOf, statOf } from "./stats.js";
 
 /** Armour tiers by Armor skill level. */
 export const ARMOR_TIERS = ["leather", "chainmail", "iron", "diamond", "netherite"];
@@ -16,17 +16,21 @@ const SLOTS = [
 const KIT_ARROWS = 32;
 
 /** Wear the Armor level's tier in every slot, locked there (it can't be
- * taken off, dropped, stored or traded) and kept on death. Anything else in
- * an armour slot goes back to the inventory. */
-export function refreshArmor(player) {
+ * taken off, dropped, stored or traded), kept on death and carrying the
+ * Armorer's enchantments. Anything else in an armour slot goes back to the
+ * inventory. Otherwise the armour is just mended; `rebuild` makes it anew
+ * (a new tier or new enchantments). */
+export function refreshArmor(player, rebuild = false) {
   const equippable = player.getComponent("minecraft:equippable");
   if (!equippable) return;
   const material = ARMOR_TIERS[statOf(player, "armor") - 1];
+  const ench = armorEnchantsOf(player);
   const inventory = player.getComponent("minecraft:inventory")?.container;
   for (const [slot, piece] of SLOTS) {
     const id = `minecraft:${material}_${piece}`;
     const current = equippable.getEquipment(slot);
-    if (current?.typeId === id && current.lockMode === ItemLockMode.slot) {
+    const ours = current?.lockMode === ItemLockMode.slot;
+    if (ours && current.typeId === id && !rebuild) {
       // Mended, so it never wears through.
       const durability = current.getComponent("minecraft:durability");
       if (durability && durability.damage > 0) {
@@ -35,7 +39,7 @@ export function refreshArmor(player) {
       }
       continue;
     }
-    if (current && current.lockMode !== ItemLockMode.slot) {
+    if (current && !ours) {
       const left = inventory?.addItem(current);
       if (left) player.dimension.spawnItem(left, player.location);
     }
@@ -43,6 +47,20 @@ export function refreshArmor(player) {
     stack.lockMode = ItemLockMode.slot;
     stack.keepOnDeath = true;
     stack.nameTag = `${player.name}'s ${material} ${piece}`;
+    const enchantable = stack.getComponent("minecraft:enchantable");
+    const wanted = [
+      [ench.style, ench.protection],
+      ["thorns", ench.thorns],
+      ["feather_falling", piece === "boots" ? ench.feather_falling : 0],
+    ];
+    for (const [type, level] of wanted) {
+      if (!level) continue;
+      try {
+        enchantable?.addEnchantment({ type: new EnchantmentType(type), level });
+      } catch {
+        // not allowed on this piece
+      }
+    }
     equippable.setEquipment(slot, stack);
   }
 }

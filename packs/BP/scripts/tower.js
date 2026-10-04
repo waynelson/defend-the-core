@@ -6,6 +6,7 @@
 
 import { BlockPermutation, BlockVolume, system, world } from "@minecraft/server";
 import { coreLocation } from "./core.js";
+import { marketBounds } from "./market.js";
 import { addCoins, payBounty } from "./economy.js";
 import { addXp, killXp } from "./progression.js";
 import { lootStack } from "./rewards.js";
@@ -54,11 +55,17 @@ function chooseSite(dim) {
   const spawn = world.getDefaultSpawnLocation();
   const core = coreLocation() ?? { x: spawn.x, z: spawn.z + 50 };
   const away = Math.atan2(spawn.z - core.z, spawn.x - core.x);
+  // Market Street runs straight back from the depot: keep clear of it.
+  const market = marketBounds(R + 3);
+  const inMarket = (x, z) => market && x >= market.x1 && x <= market.x2 && z >= market.z1 && z <= market.z2;
   let best;
   for (const dist of [26, 32, 20]) {
-    for (const offset of [0, 0.35, -0.35, 0.7, -0.7, 1.05, -1.05]) {
+    for (const offset of [0, 0.35, -0.35, 0.7, -0.7, 1.05, -1.05, 1.4, -1.4, 1.75, -1.75]) {
       const a = away + offset;
-      const site = survey(dim, Math.round(spawn.x + Math.cos(a) * dist), Math.round(spawn.z + Math.sin(a) * dist));
+      const x = Math.round(spawn.x + Math.cos(a) * dist);
+      const z = Math.round(spawn.z + Math.sin(a) * dist);
+      if (inMarket(x, z)) continue;
+      const site = survey(dim, x, z);
       if (site && (!best || site.score < best.score)) best = { ...site, toward: { x: spawn.x, z: spawn.z } };
     }
     if (best && best.score <= 3) break;
