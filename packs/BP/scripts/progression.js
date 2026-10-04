@@ -77,10 +77,12 @@ function nameTag(player) {
   }
 }
 
+/** XP for a player; they level up as soon as it's enough. */
 export function addXp(player, amount, reason) {
   if (amount <= 0) return;
   setScore(player, "xp", score(player, "xp") + amount);
   emit("xp", { name: player.name, xp: Math.round(amount), reason });
+  settle(player);
 }
 
 /** A new game: level 1, no XP, the starting skill points. */
@@ -120,13 +122,12 @@ function settle(player) {
   emit("level_up", { name: player.name, level, sp: score(player, "sp") });
 }
 
-/** End of a round: round XP for everyone online, then level-ups. */
+/** End of a round: round XP for everyone online. */
 export function roundEnd(waveNo) {
   const config = progressionConfig();
   const xp = Math.round(config.round_xp_base + config.round_xp_step * waveNo);
   for (const player of world.getAllPlayers()) {
     addXp(player, xp, `round ${waveNo}`);
-    settle(player);
   }
 }
 

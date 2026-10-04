@@ -10,7 +10,7 @@ import { getConfig, setConfig, damagedBlocks, startBreach } from "./breach.js";
 import { clearCore, coreEntity, coreHp, coreLocation, forgetCore, labelCore, placeCore } from "./core.js";
 import { buildDepot, depotSitesLoaded, respawnVendors, restockDepot } from "./depot.js";
 import { control, coreLost, gameStatus, hooks, resetGame, setPhase, startGame, waveBegin, waveCommit, waveGroup } from "./game.js";
-import { bountyOwner, defenseList, dmMine, dmPlace, startDefenses } from "./defenses.js";
+import { bountyOwner, defenseList, dmMine, dmPlace, registerPlacer, startDefenses } from "./defenses.js";
 import { econ, grantCoins, payBounty, setEconomy, startEconomy } from "./economy.js";
 import { playerList, startPlayers } from "./players.js";
 import { grantProgress, killXp, progressionConfig, roundEnd, setProgression, startProgression } from "./progression.js";
@@ -384,6 +384,9 @@ world.afterEvents.entityDie.subscribe(
 // The game mode's world rules: only the DM's attackers spawn (no natural
 // mobs, no insomnia phantoms) and players can't hurt each other.
 const GAMERULES = { domobspawning: false, doinsomnia: false, pvp: false };
+
+// Custom item components have to be registered before the world loads.
+system.beforeEvents.startup.subscribe((event) => registerPlacer(event.itemComponentRegistry));
 
 world.afterEvents.worldLoad.subscribe(() => {
   for (const [rule, value] of Object.entries(GAMERULES)) {

@@ -368,6 +368,36 @@ function openTurret(player, turret) {
   );
 }
 
+// Holding "use" repeats the event; one placement per press.
+const USE_COOLDOWN_TICKS = 8;
+const lastUse = new Map(); // player id -> tick
+
+/** The `dtc:placer` item component (on every turret and mine item): using
+ * the item on a block places the defense on the face clicked. Registered
+ * at startup, before the world loads. */
+export function registerPlacer(itemComponentRegistry) {
+  itemComponentRegistry.registerCustomComponent("dtc:placer", {
+    onUseOn(event) {
+      const player = event.source;
+      if (player?.typeId !== "minecraft:player") return;
+      const held = event.itemStack?.typeId;
+      const now = system.currentTick;
+      if (!held || now - (lastUse.get(player.id) ?? -1000) < USE_COOLDOWN_TICKS) return;
+      lastUse.set(player.id, now);
+      const offset = FACE[event.blockFace] ?? FACE.Up;
+      const spot = { x: event.block.x + offset.x, y: event.block.y + offset.y, z: event.block.z + offset.z };
+      system.run(() => {
+        try {
+          if (TURRET_ITEMS[held]) placeTurret(player, { ...TURRET_ITEMS[held], item: held }, spot);
+          else if (MINE_ITEMS[held]) placeMine(player, { ...MINE_ITEMS[held], item: held }, spot);
+        } catch (e) {
+          emit("error", { where: "place defense", error: String(e) });
+        }
+      });
+    },
+  });
+}
+
 export function startDefenses() {
   world.afterEvents.playerInteractWithEntity.subscribe((event) => {
     if (TURRET_TYPES.includes(event.target.typeId)) openTurret(event.player, event.target);
@@ -382,15 +412,6 @@ export function startDefenses() {
     if (category !== "engineer" && category !== "reset") return;
     const eng = statOf(player, "engineer");
     for (const t of turretsOf(player.name)) setTurret(t, { eng });
-  });
-
-  world.afterEvents.playerInteractWithBlock.subscribe((event) => {
-    const held = event.beforeItemStack?.typeId;
-    if (!held || !event.isFirstEvent) return;
-    const offset = FACE[event.blockFace] ?? FACE.Up;
-    const spot = { x: event.block.x + offset.x, y: event.block.y + offset.y, z: event.block.z + offset.z };
-    if (TURRET_ITEMS[held]) placeTurret(event.player, { ...TURRET_ITEMS[held], item: held }, spot);
-    else if (MINE_ITEMS[held]) placeMine(event.player, { ...MINE_ITEMS[held], item: held }, spot);
   });
 
   // Turret shots that miss are removed where they land: left stuck in the

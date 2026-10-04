@@ -600,6 +600,10 @@ def item(item_id, spec):
                 "minecraft:icon": f"dm_{item_id}",
                 "minecraft:display_name": {"value": spec["name"]},
                 "minecraft:max_stack_size": 16,
+                # Using it on a block places the defense (scripts/defenses.js
+                # registers this component; a plain item has no use, so the
+                # game never reports the interaction otherwise).
+                "dtc:placer": {},
             },
         },
     }

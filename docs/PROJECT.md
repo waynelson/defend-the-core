@@ -5,7 +5,7 @@ describes what exists, where it lives, how to change and ship it, the rules
 of the road, and what's next. **This file is authoritative; README.md is out
 of date** (it still describes the 0.6 Quartermaster and depot).
 
-Last updated: 2026-10-04, add-on v0.7.2 on beta and dev.
+Last updated: 2026-10-04, add-on v0.7.3 on dev (beta: see Current state).
 
 ---
 
@@ -168,7 +168,7 @@ script, run it, never hand-edit the output.** The main pack uses stable
 | `breach.js` | Block damage map, stuck detection (first `max_attackers`=60 mobs), modules: dig, detonate_stuck, siege_arrow, artillery |
 | `auto.js` | Auto DM: prep → generated wave → intermission (supply drop, restock, tower) → … ; watchdog and wave timeout |
 | `economy.js` | `coins` scoreboard, settings, wave pay, `BOUNTY`, `payBounty` (full to the final blow, `bounty_share` to everyone else) |
-| `progression.js` | XP, levels, skill points (`dm_xp`, `dm_level`, `dm_sp`), round-end XP |
+| `progression.js` | XP, levels (instant level-ups), skill points (`dm_xp`, `dm_level`, `dm_sp`), round-end XP |
 | `stats.js` | Six skills, per-game reset, benefits (damage bonus, health boost, regen), skill vendors, Armorer |
 | `loadout.js` | Spawn kit; armour at the Armor level, **locked in slot**, kept on death, enchanted per Armorer |
 | `shop.js` | Vendor kinds (`VENDORS`), `spawnVendor`, routing, Engineer and Provisioner stock |
@@ -345,7 +345,11 @@ results: `dist/stress_before.log`, `dist/stress.json` (not committed).
 
 ## 10. Current state
 
-- **Beta:** v0.7.2 (tag `v0.7.2`): world rules on load, turret arrow
+- **v0.7.3** (tag `v0.7.3`): turret/mine items place through a `dtc:placer`
+  custom item component (the old `playerInteractWithBlock` listener never
+  fired for plain items, so nothing could be placed); players level up as
+  soon as XP is enough, not at round end.
+- **Beta:** v0.7.2 until 0.7.3 is deployed (tag `v0.7.2`): world rules on load, turret arrow
   cleanup, per-player HUD (level, XP, skill points, skill levels), 1,000
   starting coins / 2 SP, max mobs alive cap (150), `dm:perf`, `dm:stress`.
 - **Dev:** same as beta unless noted in later commits.
