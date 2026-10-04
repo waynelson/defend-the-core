@@ -24,7 +24,7 @@ import { raiseTower, removeTower, startTowers, towerStatus } from "./tower.js";
 import { startRain } from "./rewards.js";
 import { SHOP, priceOf, startShop } from "./shop.js";
 import { MOBS, MODULES, TARGETING } from "./roster.js";
-import { attackers, spawnCenter, spawnOne, spawnPoints, validateSpawn } from "./spawner.js";
+import { attackers, autoSelectPoints, spawnCenter, spawnOne, spawnPoints, validateSpawn } from "./spawner.js";
 import { emit, overworld, pos, round, store } from "./util.js";
 
 export const PROTOCOL = 1;
@@ -192,16 +192,25 @@ const handlers = {
     return { radius_chunks: radius };
   },
 
-  // Named spawn points: {points: {north: {x, z}, ...}} replaces the set.
+  // Named spawn points: {points: {north: {x, z}, ...}} replaces the set;
+  // {auto: true} auto-selects 4 points 80 blocks from the core; {} reads them.
   points(msg) {
-    const points = msg.points ?? {};
-    for (const [name, p] of Object.entries(points)) {
-      if (!/^[a-z0-9_-]{1,24}$/.test(name)) throw new Error(`bad point name ${name}`);
-      if (!Number.isInteger(p?.x) || !Number.isInteger(p?.z)) throw new Error(`point ${name} needs integer x, z`);
+    if (msg.auto) {
+      const points = autoSelectPoints();
+      return { points };
     }
-    if (Object.keys(points).length > 16) throw new Error("at most 16 points");
-    store("dtc:points", points);
-    return { points };
+    if (msg.points !== undefined) {
+      const points = msg.points ?? {};
+      for (const [name, p] of Object.entries(points)) {
+        if (!/^[a-z0-9_-]{1,24}$/.test(name)) throw new Error(`bad point name ${name}`);
+        if (!Number.isInteger(p?.x) || !Number.isInteger(p?.z)) throw new Error(`point ${name} needs integer x, z`);
+      }
+      if (Object.keys(points).length > 16) throw new Error("at most 16 points");
+      store("dtc:points", points);
+      emit("points", { points });
+      return { points };
+    }
+    return { points: spawnPoints() };
   },
   // Ad-hoc spawn outside a wave (testing): {mob, count, bearing|point|x/z, dist, modules, targeting}.
   spawn(msg) {
@@ -303,8 +312,9 @@ const handlers = {
         handlers.core_set({ x, z, setblock: true });
         const depot = buildDepot(coreLocation(), { dist, relocate: true });
         world.setDefaultSpawnLocation(depot.entrance);
+        const pts = autoSelectPoints(dist);
         setPhase("setup", undefined, true);
-        emit("setup_done", { msg_id: msg.msg_id, ok: true, core: coreLocation(), depot });
+        emit("setup_done", { msg_id: msg.msg_id, ok: true, core: coreLocation(), depot, points: pts });
       } catch (err) {
         emit("setup_done", { msg_id: msg.msg_id, ok: false, error: String(err) });
       }

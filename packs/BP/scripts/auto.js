@@ -12,7 +12,7 @@ import {
 import { startRain } from "./rewards.js";
 import { raiseTower } from "./tower.js";
 import { MOBS } from "./roster.js";
-import { spawnPoints } from "./spawner.js";
+import { autoSelectPoints, spawnPoints } from "./spawner.js";
 import { emit, store, stored } from "./util.js";
 
 const AUTO_PROP = "dtc:auto";
@@ -82,14 +82,20 @@ function shuffle(list) {
   return list;
 }
 
-/** Where this wave comes from: some of the saved spawn points, or bearings. */
+/** Where this wave comes from: some of the saved spawn points. */
 function places(d) {
   const sides = Math.min(4, 1 + Math.floor(d / 3));
-  const names = Object.keys(spawnPoints());
+  let names = Object.keys(spawnPoints());
+  if (!names.length) {
+    try {
+      const pts = autoSelectPoints(80);
+      names = Object.keys(pts);
+    } catch {
+      // fallback
+    }
+  }
   if (names.length) return shuffle([...names]).slice(0, Math.min(sides, names.length)).map((point) => ({ point }));
-  const base = Math.floor(Math.random() * 24) * 15;
-  const spread = { 1: [0], 2: [-40, 40], 3: [-60, 0, 60], 4: [0, 90, 180, 270] }[sides];
-  return spread.map((o) => ({ bearing: (((base + o) % 360) + 360) % 360, dist: 40 }));
+  return [{ point: "north" }];
 }
 
 // The power budget: gentle early, then steep from difficulty 5 so late
