@@ -393,6 +393,16 @@ export function startDefenses() {
     else if (MINE_ITEMS[held]) placeMine(event.player, { ...MINE_ITEMS[held], item: held }, spot);
   });
 
+  // Turret shots that miss are removed where they land: left stuck in the
+  // ground they pile up by the thousand and slow the server (stress test).
+  world.afterEvents.projectileHitBlock.subscribe((event) => {
+    try {
+      if (TURRET_TYPES.includes(event.source?.typeId) && event.projectile.isValid) event.projectile.remove();
+    } catch {
+      // the turret or the arrow is gone already
+    }
+  });
+
   // Frost turret snowballs slow what they hit.
   world.afterEvents.projectileHitEntity.subscribe((event) => {
     if (event.source?.typeId !== "dm:turret_frost") return;

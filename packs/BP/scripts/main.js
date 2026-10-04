@@ -19,6 +19,7 @@ import { refreshArmor, startLoadout } from "./loadout.js";
 import { newGameForAll, startStats } from "./stats.js";
 import { blockPrices } from "./mason.js";
 import { buildMarket } from "./market.js";
+import { setPerf, stress } from "./perf.js";
 import { raiseTower, removeTower, startTowers, towerStatus } from "./tower.js";
 import { startRain } from "./rewards.js";
 import { SHOP, priceOf, startShop } from "./shop.js";
@@ -256,6 +257,14 @@ const handlers = {
   depot_restock() {
     return restockDepot();
   },
+  // Tick timing and entity counts: {on, every?}; perf lines follow.
+  perf(msg) {
+    return setPerf(msg);
+  },
+  // Dev stress tests: {clear: true} or {turrets: n, type?, tier?}.
+  stress(msg) {
+    return stress(msg);
+  },
   // Build (or rebuild) Market Street behind the depot; done when a
   // market_done line follows.
   market() {
@@ -370,7 +379,18 @@ world.afterEvents.entityDie.subscribe(
   { entityTypes: ["dm:core", ...Object.keys(MOBS)] }
 );
 
+// The game mode's world rules: only the DM's attackers spawn (no natural
+// mobs, no insomnia phantoms) and players can't hurt each other.
+const GAMERULES = { domobspawning: false, doinsomnia: false, pvp: false };
+
 world.afterEvents.worldLoad.subscribe(() => {
+  for (const [rule, value] of Object.entries(GAMERULES)) {
+    try {
+      overworld().runCommand(`gamerule ${rule} ${value}`);
+    } catch (e) {
+      emit("error", { where: `gamerule ${rule}`, error: String(e) });
+    }
+  }
   startBreach();
   startGame();
   startPlayers();
