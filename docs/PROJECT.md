@@ -120,11 +120,10 @@ the first spike.
 - World rules (no natural mob spawns, no insomnia phantoms, no PvP) are set
   by the add-on on every load (`GAMERULES` in `main.js`).
 
-**Beta world** "Nelson - Defend the CORE World 2", seed 1829058741, 441
-chunks pre-generated: core (-139, 62, 153); depot centre (-182, 69, 128),
-facing east; Market Street entrance (-190, 70, 128), plaza (-246, 70, 128),
-Pawnbroker stand in front of the fountain. Game #2 in progress (wave 7,
-prep) as of 2026-10-04.
+**Beta world** "Nelson - Defend the CORE World 3", seed 923588190 (made
+2026-10-04 18:14 UTC; not pre-generated): core (0, 98, 0) on a hilltop;
+depot (-43, 72, -25) facing east; Market Street entrance (-51, 73, -25),
+plaza (-107, 73, -25). Worlds 1 and 2 are still in `worlds/`.
 
 **Dev world**: core on a beacon at (0, 65, 0) in the middle of a flattened
 81×81 stone stress arena (y 65, x/z −40..40); depot (43, 64, −25) facing
@@ -161,6 +160,13 @@ DM tab (browser) ──HTTPS──> hub API (/api/v2/servers/<id>/dm)
 - `WORLD_ACTIONS` in `protocol.py` (weather, time, give, say, title, dm,
   tp_core, tell, heal, kick, gamemode) are plain vanilla commands built by
   the hub, not add-on actions.
+- **New world** (`new_world` hub action, Setup card; `app/classes/dm/new_world.py`,
+  remote servers only): sets a new `level-name` (next number) and seed
+  (random or given) with a restart, stops, enables the packs that were on in
+  the old world, turns on Beta APIs in level.dat, starts, waits for
+  `loaded`, runs `setup`; `new_world` / `new_world_done` events in the feed.
+  Refuses with players online unless confirmed (`force`). The old world stays
+  on disk.
 - **Armed waves** ("launch when the timer ends") live in the hub: saved to
   `C:\Crafty\app\config\dm_armed.json`, watched by a thread per server that
   polls the console each second, asks the add-on for `status` every 15 s,
@@ -266,6 +272,12 @@ mobs alive), World, Setup (world setup, depot, Market Street).
   mobs for waves 1–6, then 38, 57, 94, 155 (difficulty 8.3); difficulty 9 ≈
   244, 10 ≈ 430 (budget `8 + 7d + 6·max(0, d−5)³`, same in the DM tab
   generator). The auto DM doesn't add bosses.
+- **Spawn points** (added by another agent, 2026-10-04): world setup and
+  `points {auto: true}` pick four spawn points (N/E/S/W) 80 blocks from the
+  core, avoiding water, lava and the depot; spawning by bearing/distance was
+  removed (waves and the generator use spawn points). The depot also sits 80
+  blocks out (setup/depot `dist` up to 120). Setup holds four temporary
+  quadrant ticking areas (`dtc_setup_*`) so sites that far out load.
 - **Wave limits:** 1,000 mobs per wave, 200 per group and per mob type, 40
   groups. **Max mobs alive** (`max_alive`, default 150): spawns past the cap
   queue and come in (≤ 6 per 5 ticks) as others die; `wave_capped` once per

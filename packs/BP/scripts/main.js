@@ -298,11 +298,30 @@ const handlers = {
       if (!added.successCount) emit("setup_progress", { msg_id: msg.msg_id, error: "tickingarea add failed" });
     }, 2);
     const dist = msg.dist ?? 80;
+    // The core's circle (4 chunks, the engine's limit) doesn't reach depot
+    // sites and spawn points `dist` out: hold four quadrant boxes (each
+    // under the 100-chunk limit) while setup runs.
+    const reach = dist + 16;
+    const quadrants = { ne: [1, -1], nw: [-1, -1], se: [1, 1], sw: [-1, 1] };
+    system.runTimeout(() => {
+      for (const [q, [sx, sz]] of Object.entries(quadrants)) {
+        overworld().runCommand(`tickingarea remove dtc_setup_${q}`);
+      }
+    }, 1);
+    system.runTimeout(() => {
+      for (const [q, [sx, sz]] of Object.entries(quadrants)) {
+        overworld().runCommand(`tickingarea add ${x} 0 ${z} ${x + sx * reach} 0 ${z + sz * reach} dtc_setup_${q} true`);
+      }
+    }, 3);
+    const release = () => {
+      for (const q of Object.keys(quadrants)) overworld().runCommand(`tickingarea remove dtc_setup_${q}`);
+    };
     const poll = system.runInterval(() => {
       const timedOut = system.currentTick - started > 20 * 60;
       const coreLoaded = overworld().isChunkLoaded({ x, y: 0, z });
       if (!coreLoaded && timedOut) {
         system.clearRun(poll);
+        release();
         emit("setup_done", { msg_id: msg.msg_id, ok: false, error: "chunks did not load in 60 s" });
       }
       // Wait for every depot candidate too; after 60 s, use whichever loaded.
@@ -318,6 +337,8 @@ const handlers = {
       } catch (err) {
         emit("setup_done", { msg_id: msg.msg_id, ok: false, error: String(err) });
       }
+      // Market Street holds its own area while it builds.
+      release();
     }, 20);
     return { core_at: { x, z }, waiting_for_chunks: true };
   },
