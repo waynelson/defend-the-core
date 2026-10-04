@@ -61,6 +61,24 @@ ROSTER = {
         "families": ["phantom", "undead", "dm_flyer"], "template": "phantom",
     },
 }
+# Tower guards: defense mode (scripts/tower.js).
+ROSTER.update({
+    "guard_zombie": {
+        "base": "zombie", "name": "Tower Guard", "health": 24, "speed": 0.23, "attack": 4, "guard": True,
+        "texture": "textures/entity/zombie/zombie", "families": ["zombie", "undead"],
+        "equipment": "loot_tables/dm/guard_gear.json",
+    },
+    "guard_archer": {
+        "base": "skeleton", "name": "Tower Archer", "health": 20, "speed": 0.25, "guard": True,
+        "texture": "textures/entity/skeleton/wither_skeleton", "families": ["skeleton", "undead"],
+    },
+    "guard_captain": {
+        "base": "zombie", "name": "Tower Captain", "health": 80, "speed": 0.2, "attack": 8, "guard": True,
+        "texture": "textures/entity/zombie/husk", "families": ["zombie", "undead"], "scale": 1.5,
+        "equipment": "loot_tables/dm/captain_gear.json",
+    },
+})
+
 FLYERS = ("ghast", "blaze", "phantom")
 # Walking parts of common_components() a flyer doesn't get.
 WALKING = (
@@ -133,18 +151,21 @@ def targeting_events():
 
 def common_components(mob):
     return {
-        "minecraft:type_family": {"family": ["dm_attacker", *mob["families"], "monster", "mob"]},
+        "minecraft:type_family": {
+            "family": ["dm_guard" if mob.get("guard") else "dm_attacker", *mob["families"], "monster", "mob"]
+        },
         "minecraft:health": {"value": mob["health"], "max": mob["health"]},
         "minecraft:movement": {"value": mob["speed"]},
         "minecraft:follow_range": {"value": 64, "max": 64},
         "minecraft:collision_box": {"width": 0.6, "height": 1.9},
-        # Retaliate against players, never against fellow attackers (stray
-        # arrows otherwise start infighting).
+        # Retaliate against players, never against fellow attackers or tower
+        # guards (stray arrows otherwise start infighting).
         "minecraft:behavior.hurt_by_target": {
             "priority": 1,
-            "entity_types": [{"filters": {
-                "test": "is_family", "subject": "other", "operator": "!=", "value": "dm_attacker",
-            }}],
+            "entity_types": [{"filters": {"all_of": [
+                {"test": "is_family", "subject": "other", "operator": "!=", "value": "dm_attacker"},
+                {"test": "is_family", "subject": "other", "operator": "!=", "value": "dm_guard"},
+            ]}}],
         },
         "minecraft:behavior.random_stroll": {"priority": 7, "speed_multiplier": 1},
         "minecraft:behavior.look_at_player": {"priority": 8, "look_distance": 6},
@@ -174,6 +195,19 @@ def behavior(name, mob):
     default = mob.get("targeting", "prioritized")
     events = {"minecraft:entity_spawned": {"add": {"component_groups": [f"dm:tgt_{default}"]}}}
     events.update(targeting_events())
+    if mob.get("guard"):
+        # Defense mode: hold position, fight players who come near, ignore
+        # the core. (scripts/tower.js leashes them to their post.)
+        components.pop("minecraft:behavior.random_stroll", None)
+        groups = {
+            "dm:tgt_guard": {
+                "minecraft:behavior.nearest_attackable_target": {
+                    "priority": 2, "must_see": True, "reselect_targets": True, "within_radius": 16,
+                    "entity_types": [target_entry("player", 16, True)],
+                }
+            }
+        }
+        events = {"minecraft:entity_spawned": {"add": {"component_groups": ["dm:tgt_guard"]}}}
 
     if mob["base"] == "zombie":
         components["minecraft:attack"] = {"damage": mob["attack"]}

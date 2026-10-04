@@ -2,14 +2,14 @@
   "format_version": "1.26.50",
   "minecraft:entity": {
     "description": {
-      "identifier": "dm:siege_skeleton",
+      "identifier": "dm:guard_archer",
       "is_summonable": true,
       "is_spawnable": true
     },
     "components": {
       "minecraft:type_family": {
         "family": [
-          "dm_attacker",
+          "dm_guard",
           "skeleton",
           "undead",
           "monster",
@@ -53,10 +53,6 @@
             }
           }
         ]
-      },
-      "minecraft:behavior.random_stroll": {
-        "priority": 7,
-        "speed_multiplier": 1
       },
       "minecraft:behavior.look_at_player": {
         "priority": 8,
@@ -117,97 +113,20 @@
       }
     },
     "component_groups": {
-      "dm:tgt_core_only": {
+      "dm:tgt_guard": {
         "minecraft:behavior.nearest_attackable_target": {
           "priority": 2,
-          "must_see": false,
+          "must_see": true,
           "reselect_targets": true,
-          "within_radius": 64,
+          "within_radius": 16,
           "entity_types": [
-            {
-              "filters": {
-                "test": "is_family",
-                "subject": "other",
-                "value": "dm_core"
-              },
-              "max_dist": 64,
-              "must_see": false
-            }
-          ]
-        }
-      },
-      "dm:tgt_prioritized": {
-        "minecraft:behavior.nearest_prioritized_attackable_target": {
-          "priority": 2,
-          "must_see": false,
-          "reselect_targets": true,
-          "within_radius": 64,
-          "entity_types": [
-            {
-              "filters": {
-                "test": "is_family",
-                "subject": "other",
-                "value": "dm_core"
-              },
-              "max_dist": 64,
-              "must_see": false,
-              "priority": 0
-            },
-            {
-              "filters": {
-                "test": "is_family",
-                "subject": "other",
-                "value": "dm_turret"
-              },
-              "max_dist": 8,
-              "must_see": true,
-              "priority": 1
-            },
             {
               "filters": {
                 "test": "is_family",
                 "subject": "other",
                 "value": "player"
               },
-              "max_dist": 6,
-              "must_see": true,
-              "priority": 2
-            }
-          ]
-        }
-      },
-      "dm:tgt_nearest": {
-        "minecraft:behavior.nearest_attackable_target": {
-          "priority": 2,
-          "must_see": false,
-          "reselect_targets": true,
-          "within_radius": 64,
-          "entity_types": [
-            {
-              "filters": {
-                "test": "is_family",
-                "subject": "other",
-                "value": "dm_core"
-              },
-              "max_dist": 64,
-              "must_see": false
-            },
-            {
-              "filters": {
-                "test": "is_family",
-                "subject": "other",
-                "value": "dm_turret"
-              },
-              "max_dist": 8,
-              "must_see": true
-            },
-            {
-              "filters": {
-                "test": "is_family",
-                "subject": "other",
-                "value": "player"
-              },
-              "max_dist": 6,
+              "max_dist": 16,
               "must_see": true
             }
           ]
@@ -218,46 +137,7 @@
       "minecraft:entity_spawned": {
         "add": {
           "component_groups": [
-            "dm:tgt_prioritized"
-          ]
-        }
-      },
-      "dm:tgt_core_only": {
-        "remove": {
-          "component_groups": [
-            "dm:tgt_prioritized",
-            "dm:tgt_nearest"
-          ]
-        },
-        "add": {
-          "component_groups": [
-            "dm:tgt_core_only"
-          ]
-        }
-      },
-      "dm:tgt_prioritized": {
-        "remove": {
-          "component_groups": [
-            "dm:tgt_core_only",
-            "dm:tgt_nearest"
-          ]
-        },
-        "add": {
-          "component_groups": [
-            "dm:tgt_prioritized"
-          ]
-        }
-      },
-      "dm:tgt_nearest": {
-        "remove": {
-          "component_groups": [
-            "dm:tgt_core_only",
-            "dm:tgt_prioritized"
-          ]
-        },
-        "add": {
-          "component_groups": [
-            "dm:tgt_nearest"
+            "dm:tgt_guard"
           ]
         }
       }

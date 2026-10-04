@@ -52,6 +52,14 @@ function pick(quality) {
   return POOL[0];
 }
 
+/** A random reward stack at a quality (1 basic .. 3 great). */
+export function lootStack(quality) {
+  const [id, min, max] = pick(quality);
+  const item = new ItemStack(id);
+  item.amount = Math.min(item.maxAmount, min + Math.floor(Math.random() * (max - min + 1)));
+  return item;
+}
+
 function dropOne(core, radius, quality) {
   // Uniform over the disc, so the edge isn't sparse.
   const angle = Math.random() * Math.PI * 2;

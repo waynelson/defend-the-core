@@ -19,6 +19,7 @@ const DEFAULTS = {
 export const BOUNTY = {
   "dm:zombie": 2, "dm:skeleton": 3, "dm:swarmer": 1, "dm:digger": 4, "dm:sapper": 5,
   "dm:siege_skeleton": 4, "dm:ghast": 12, "dm:blaze": 6, "dm:phantom": 4,
+  "dm:guard_zombie": 4, "dm:guard_archer": 4, "dm:guard_captain": 20,
 };
 const RANGES = {
   wave_base: [0, 10000], wave_step: [0, 1000], bounty_mult: [0, 20], turret_limit: [0, 20], mine_limit: [0, 100],

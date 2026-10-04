@@ -16,6 +16,7 @@ import { playerList, startPlayers } from "./players.js";
 import { grantProgress, killXp, progressionConfig, roundEnd, setProgression, startProgression } from "./progression.js";
 import { autoStatus, setAuto, startAuto } from "./auto.js";
 import { startLoadout } from "./loadout.js";
+import { raiseTower, removeTower, startTowers, towerStatus } from "./tower.js";
 import { startRain } from "./rewards.js";
 import { SHOP, priceOf, startShop } from "./shop.js";
 import { MOBS, MODULES, TARGETING } from "./roster.js";
@@ -74,6 +75,7 @@ const handlers = {
       config: getConfig(),
       points: spawnPoints(),
       auto: autoStatus(),
+      tower: towerStatus(),
       ...gameStatus(),
     };
   },
@@ -117,6 +119,14 @@ const handlers = {
   // DM grants: {player|all, xp?, sp?, level?}
   progress(msg) {
     return grantProgress(msg);
+  },
+  // Towers: {floors?, difficulty?} raises one near the spawn (replacing the
+  // last); tower_remove takes it down.
+  tower(msg) {
+    return raiseTower(msg);
+  },
+  tower_remove() {
+    return removeTower();
   },
   // DM: lay a mine {type: blast|frost, x, y, z, owner?}
   place_mine(msg) {
@@ -350,6 +360,7 @@ world.afterEvents.worldLoad.subscribe(() => {
   startDefenses();
   startProgression();
   startLoadout();
+  startTowers();
   // Every cleared wave is a round survived, whoever launched it.
   hooks.waveCleared.push((waveNo) => roundEnd(waveNo));
   startAuto();

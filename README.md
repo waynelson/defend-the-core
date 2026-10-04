@@ -85,6 +85,20 @@ The **Arms Dealer**, beside the Quartermaster, is where skill points go:
   Density V mace); unlocked gear is then **bought with coins** as often as a
   player can afford it.
 
+### Towers
+
+`dm:tower` raises a procedurally generated tower about 26 blocks from the
+spawn, on the side away from the core: 2–6 floors (3–5 by default) in a
+random style (stone brick, deepslate, blackstone or sandstone), window gaps,
+lanterns, a ladder through every floor, battlements, and a door facing the
+spawn. Every floor has a loot chest (better higher up) and guards in
+**defense mode** (`dm:guard_zombie`, `dm:guard_archer`): they ignore the
+core, hold their post (pulled back if they stray more than 10 blocks) and
+fight players who come within 16 blocks. A `dm:guard_captain` holds the top.
+Guard kills pay bounties and XP; clearing every guard pays everyone online
+100 coins and 150 XP. The next tower replaces the last; `dm:tower_remove`
+takes it down. The auto DM raises one every `tower_every` intermissions.
+
 ### Auto DM
 
 `dm:auto {"on": true}` runs the game with no DM: a prep timer, then a
@@ -146,6 +160,8 @@ Crafty's remote console).
 | `vendor` | `{}` | Put the Quartermaster back in the middle of the depot. |
 | `defenses` | `{}` | Everyone's turrets and mines. |
 | `place_turret`, `place_mine` | `{"type":"arrow","x":..,"y":..,"z":..,"owner"?}` | DM gift: place a turret (arrow, flak, frost) or mine (blast, frost). |
+| `tower` | `{"floors":4,"difficulty":5}` | Raise a tower near the spawn (replacing the last one). |
+| `tower_remove` | `{}` | Take the tower down. |
 | `auto` | `{"on":true,"waves":10,"prep_s":180,"intermission_s":90,"start":2,"step":0.7}` | Auto DM on/off and settings; `{}` reads its state. |
 | `progression` | `{"round_xp_base":50,"sp_per_level":1}` | Level settings; `{}` reads them. |
 | `progress` | `{"player":"Steve","sp":2}` or `{"all":true,"xp":100}` | Grant XP, skill points or set a level. |

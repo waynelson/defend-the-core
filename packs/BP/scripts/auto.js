@@ -10,6 +10,7 @@ import {
   activeWave, finishWave, gameStatus, hooks, resetGame, setPhase, waveBegin, waveCommit, waveGroup,
 } from "./game.js";
 import { startRain } from "./rewards.js";
+import { raiseTower } from "./tower.js";
 import { MOBS } from "./roster.js";
 import { spawnPoints } from "./spawner.js";
 import { emit, store, stored } from "./util.js";
@@ -26,11 +27,12 @@ const DEFAULTS = {
   flyers: true,
   rewards: true, // supply drop every intermission
   restock_every: 3, // restock the depot every N waves (0 = never)
+  tower_every: 2, // raise a new tower every N intermissions (0 = never)
   wave_timeout_s: 420,
 };
 const RANGES = {
   prep_s: [10, 1800], intermission_s: [10, 1800], waves: [0, 100], start: [1, 10], step: [0, 3],
-  max: [1, 10], restock_every: [0, 20], wave_timeout_s: [60, 1800],
+  max: [1, 10], restock_every: [0, 20], tower_every: [0, 20], wave_timeout_s: [60, 1800],
 };
 
 // Same power-budget mix as the DM tab's generator.
@@ -177,6 +179,13 @@ function onWaveCleared(waveNo, final) {
       world.getDimension("overworld").runCommand("title @a subtitle §6Supply drop at the core!");
     } catch (err) {
       emit("auto_error", { error: String(err) });
+    }
+  }
+  if (config.tower_every && waveNo % config.tower_every === 0) {
+    try {
+      raiseTower({ difficulty: difficulty(config, waveNo + 1) });
+    } catch (err) {
+      emit("auto_error", { error: `tower: ${err}` });
     }
   }
   if (config.restock_every && waveNo % config.restock_every === 0) {
