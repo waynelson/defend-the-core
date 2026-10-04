@@ -14,6 +14,15 @@ export const MOBS = {
   "dm:ghast": { label: "Siege Ghast", modules: { artillery: { interval_s: 5 } }, spawn_height: 8, targeting: "core_only" },
   "dm:blaze": { label: "Blaze", modules: {}, spawn_height: 8 },
   "dm:phantom": { label: "Phantom", modules: {}, spawn_height: 18 },
+  // Bosses: big and tough, with a boss bar; announced when they arrive and
+  // when they fall. The Necromancer keeps raising swarmers (summon).
+  "dm:warlord": { label: "Warlord", modules: { dig: { dps: 4 } }, boss: true },
+  "dm:colossus": { label: "Bone Colossus", modules: { siege_arrow: { damage_per_hit: 5 } }, boss: true },
+  "dm:necromancer": { label: "Necromancer", modules: { summon: { interval_s: 12, count: 3 } }, boss: true },
+  "dm:demolisher": { label: "Demolisher", modules: { detonate_stuck: { stuck_seconds: 3 } }, boss: true },
+  "dm:dread_ghast": {
+    label: "Dread Ghast", modules: { artillery: { interval_s: 2.5 } }, spawn_height: 10, targeting: "core_only", boss: true,
+  },
 };
 
 /** Module name -> param name -> [min, max]. */
@@ -22,6 +31,7 @@ export const MODULES = {
   detonate_stuck: { stuck_seconds: [1, 60] },
   siege_arrow: { damage_per_hit: [0.1, 20] },
   artillery: { interval_s: [2, 30] },
+  summon: { interval_s: [3, 60], count: [1, 10] },
 };
 
 export const TARGETING = ["core_only", "prioritized", "nearest"];

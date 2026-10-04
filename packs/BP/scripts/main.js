@@ -374,6 +374,12 @@ world.afterEvents.entityDie.subscribe(
     } else {
       emit("attacker_died", { mob: event.deadEntity.typeId, by: src.damagingEntity?.typeId ?? src.cause });
       const earner = bountyOwner(event.deadEntity, src.damagingEntity);
+      const boss = MOBS[event.deadEntity.typeId]?.boss;
+      if (boss) {
+        const label = MOBS[event.deadEntity.typeId].label;
+        world.sendMessage(`§6§l${label} has fallen!${earner ? `§r §eFinal blow: ${earner}` : ""}`);
+        emit("boss_killed", { mob: event.deadEntity.typeId, by: earner ?? null });
+      }
       payBounty(event.deadEntity.typeId, earner);
       killXp(event.deadEntity.typeId, earner);
     }

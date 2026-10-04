@@ -1,8 +1,9 @@
 // Spawning attackers and finding the live ones.
 
+import { world } from "@minecraft/server";
 import { coreLocation } from "./core.js";
 import { MOBS, TARGETING, resolveModules } from "./roster.js";
-import { overworld, stored } from "./util.js";
+import { emit, overworld, stored } from "./util.js";
 
 export const ATTACKER_FAMILY = "dm_attacker";
 const POINTS_PROP = "dtc:points"; // {name: {x, z}}
@@ -56,6 +57,10 @@ export function spawnOne(spec, center, modules, tags = {}) {
   mob.setDynamicProperty("dtc:targeting", targeting);
   mob.setDynamicProperty("dtc:modules", JSON.stringify(modules));
   for (const [key, value] of Object.entries(tags)) mob.setDynamicProperty(key, value);
+  if (MOBS[spec.mob]?.boss) {
+    world.sendMessage(`§4§l[BOSS]§r §c${MOBS[spec.mob].label} has joined the attack!`);
+    emit("boss_spawned", { mob: spec.mob, at: { x, y: Math.round(mob.location.y), z } });
+  }
   return mob;
 }
 

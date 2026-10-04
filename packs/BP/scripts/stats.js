@@ -11,7 +11,7 @@
 // turret and mine limits and turret durability (defenses.js).
 
 import { EntityDamageCause, EquipmentSlot, system, world } from "@minecraft/server";
-import { econ, setCoins } from "./economy.js";
+import { coinsOf, econ, setCoins } from "./economy.js";
 import { gameNo, hudLines } from "./game.js";
 import { giveKit, refreshArmor } from "./loadout.js";
 import { progressOf, resetProgress, spendSkillPoints } from "./progression.js";
@@ -394,7 +394,8 @@ function openArmorer(player) {
 
 const HUD_NAMES = { ranged: "Ranged", melee: "Melee", health: "Health", regen: "Regen", armor: "Armor", engineer: "Eng" };
 
-/** The player's own action-bar lines: level, XP and skill points to spend,
+/** The player's own action-bar lines: their coins (only they see them),
+ * level, XP and skill points to spend,
  * then their level in each skill (gold when maxed). */
 function hudText(player) {
   const prog = progressOf(player);
@@ -404,7 +405,7 @@ function hudText(player) {
     const level = stats[c] ?? 1;
     return `§7${HUD_NAMES[c]} ${level >= MAX_LEVEL ? "§6" : "§f"}${level}`;
   }).join("  ");
-  return `§6Level ${prog.level}§7 · ${prog.xp}/${prog.next} XP · ${sp}\n${skills}`;
+  return `§e${coinsOf(player)} coins§7 · §6Level ${prog.level}§7 · ${prog.xp}/${prog.next} XP · ${sp}\n${skills}`;
 }
 
 // ---------------------------------------------------------------- events

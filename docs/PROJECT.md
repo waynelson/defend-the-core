@@ -227,6 +227,15 @@ script, run it, never hand-edit the output.** The main pack uses stable
   ignore the cap.
 - **Attackers:** zombie, skeleton, swarmer, digger, sapper, siege skeleton,
   phantom, blaze, ghast (ghast targets the core only; artillery module).
+- **Bosses** (`dm_boss` family, boss bar, 0.9 knockback resistance,
+  announced on arrival and defeat): Warlord (400 HP, scale 2.4, dig 4),
+  Bone Colossus (300, siege_arrow 5, fast long-range volleys), Necromancer
+  (200, `summon` module: 3 swarmers every 12 s, not part of the wave, within
+  max_alive), Demolisher (150, power-7 blast, detonates after 3 s stuck),
+  Dread Ghast (250, artillery every 2.5 s). Bounties 40–80. Bosses always
+  get their breach modules (sorted ahead of the 60 tracked attackers).
+- **Coins are private:** no scoreboard is displayed; each player sees their
+  own balance on their HUD line.
 - **Fresh start each game:** 1,000 coins (`start_coins`) and 2 skill points
   (progression `start_sp`), level 1 in all six skills, level-1 kit (locked leather armour, stone sword, bow, 32 arrows).
   Players from an older game or version are wiped on first appearance;

@@ -1,0 +1,278 @@
+{
+  "format_version": "1.26.50",
+  "minecraft:entity": {
+    "description": {
+      "identifier": "dm:warlord",
+      "is_summonable": true,
+      "is_spawnable": true
+    },
+    "components": {
+      "minecraft:type_family": {
+        "family": [
+          "dm_attacker",
+          "dm_boss",
+          "zombie",
+          "undead",
+          "monster",
+          "mob"
+        ]
+      },
+      "minecraft:health": {
+        "value": 400,
+        "max": 400
+      },
+      "minecraft:movement": {
+        "value": 0.21
+      },
+      "minecraft:follow_range": {
+        "value": 64,
+        "max": 64
+      },
+      "minecraft:collision_box": {
+        "width": 1.4,
+        "height": 4.4
+      },
+      "minecraft:behavior.hurt_by_target": {
+        "priority": 1,
+        "entity_types": [
+          {
+            "filters": {
+              "all_of": [
+                {
+                  "test": "is_family",
+                  "subject": "other",
+                  "operator": "!=",
+                  "value": "dm_attacker"
+                },
+                {
+                  "test": "is_family",
+                  "subject": "other",
+                  "operator": "!=",
+                  "value": "dm_guard"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "minecraft:behavior.random_stroll": {
+        "priority": 7,
+        "speed_multiplier": 1
+      },
+      "minecraft:behavior.look_at_player": {
+        "priority": 8,
+        "look_distance": 6
+      },
+      "minecraft:behavior.random_look_around": {
+        "priority": 9
+      },
+      "minecraft:breathable": {
+        "total_supply": 15,
+        "suffocate_time": 0,
+        "breathes_air": true,
+        "breathes_water": true
+      },
+      "minecraft:can_climb": {},
+      "minecraft:jump.static": {},
+      "minecraft:movement.basic": {},
+      "minecraft:navigation.walk": {
+        "can_walk": true,
+        "is_amphibious": true,
+        "can_pass_doors": true
+      },
+      "minecraft:physics": {},
+      "minecraft:pushable_by_entity": {},
+      "minecraft:pushable_by_block": {},
+      "minecraft:nameable": {},
+      "minecraft:persistent": {},
+      "minecraft:conditional_bandwidth_optimization": {},
+      "minecraft:hurt_on_condition": {
+        "damage_conditions": [
+          {
+            "cause": "lava",
+            "damage_per_tick": 4,
+            "filters": {
+              "test": "in_lava"
+            }
+          }
+        ]
+      },
+      "minecraft:attack": {
+        "damage": 12
+      },
+      "minecraft:behavior.melee_box_attack": {
+        "priority": 4,
+        "track_target": true
+      },
+      "minecraft:equipment": {
+        "table": "loot_tables/dm/warlord_gear.json",
+        "slot_drop_chance": [
+          {
+            "slot": "slot.weapon.mainhand",
+            "drop_chance": 0
+          },
+          {
+            "slot": "slot.armor.head",
+            "drop_chance": 0
+          }
+        ]
+      },
+      "minecraft:scale": {
+        "value": 2.4
+      },
+      "minecraft:boss": {
+        "should_darken_sky": false,
+        "hud_range": 64
+      },
+      "minecraft:knockback_resistance": {
+        "value": 0.9
+      }
+    },
+    "component_groups": {
+      "dm:tgt_core_only": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 64,
+          "entity_types": [
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "dm_core"
+              },
+              "max_dist": 64,
+              "must_see": false
+            }
+          ]
+        }
+      },
+      "dm:tgt_prioritized": {
+        "minecraft:behavior.nearest_prioritized_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 64,
+          "entity_types": [
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "dm_core"
+              },
+              "max_dist": 64,
+              "must_see": false,
+              "priority": 0
+            },
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "dm_turret"
+              },
+              "max_dist": 8,
+              "must_see": true,
+              "priority": 1
+            },
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "player"
+              },
+              "max_dist": 6,
+              "must_see": true,
+              "priority": 2
+            }
+          ]
+        }
+      },
+      "dm:tgt_nearest": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 64,
+          "entity_types": [
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "dm_core"
+              },
+              "max_dist": 64,
+              "must_see": false
+            },
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "dm_turret"
+              },
+              "max_dist": 8,
+              "must_see": true
+            },
+            {
+              "filters": {
+                "test": "is_family",
+                "subject": "other",
+                "value": "player"
+              },
+              "max_dist": 6,
+              "must_see": true
+            }
+          ]
+        }
+      }
+    },
+    "events": {
+      "minecraft:entity_spawned": {
+        "add": {
+          "component_groups": [
+            "dm:tgt_prioritized"
+          ]
+        }
+      },
+      "dm:tgt_core_only": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_prioritized",
+            "dm:tgt_nearest"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_core_only"
+          ]
+        }
+      },
+      "dm:tgt_prioritized": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_core_only",
+            "dm:tgt_nearest"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_prioritized"
+          ]
+        }
+      },
+      "dm:tgt_nearest": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_core_only",
+            "dm:tgt_prioritized"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_nearest"
+          ]
+        }
+      }
+    }
+  }
+}

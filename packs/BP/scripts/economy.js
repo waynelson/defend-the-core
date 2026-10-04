@@ -1,5 +1,5 @@
-// Coins: a `coins` scoreboard (kept per player by the game, shown in the
-// sidebar). Everyone online earns a share when a wave is cleared. Every kill
+// Coins: a `coins` scoreboard (kept per player by the game; not displayed,
+// each player sees only their own balance on their HUD). Everyone online earns a share when a wave is cleared. Every kill
 // pays a bounty: the full bounty to whoever lands the killing blow (or owns
 // the turret or mine that did), and bounty_share of it to everyone else.
 
@@ -25,6 +25,8 @@ export const BOUNTY = {
   "dm:zombie": 2, "dm:skeleton": 3, "dm:swarmer": 1, "dm:digger": 4, "dm:sapper": 5,
   "dm:siege_skeleton": 4, "dm:ghast": 12, "dm:blaze": 6, "dm:phantom": 4,
   "dm:guard_zombie": 4, "dm:guard_archer": 4, "dm:guard_captain": 20,
+  // Bosses
+  "dm:warlord": 60, "dm:colossus": 50, "dm:necromancer": 70, "dm:demolisher": 40, "dm:dread_ghast": 80,
 };
 const RANGES = {
   wave_base: [0, 10000], wave_step: [0, 1000], bounty_mult: [0, 20], turret_limit: [0, 20], mine_limit: [0, 100],
@@ -131,5 +133,15 @@ export function grantCoins(msg) {
 }
 
 export function startEconomy() {
-  world.scoreboard.setObjectiveAtDisplaySlot(DisplaySlotId.Sidebar, { objective: objective() });
+  objective();
+  // No sidebar: a scoreboard on screen shows everyone's coins to everyone.
+  // Each player sees their own balance on their HUD line (stats.js).
+  for (const slot of [DisplaySlotId.Sidebar, DisplaySlotId.List, DisplaySlotId.BelowName]) {
+    try {
+      const shown = world.scoreboard.getObjectiveAtDisplaySlot(slot);
+      if (shown?.objective.id === OBJECTIVE) world.scoreboard.clearObjectiveAtDisplaySlot(slot);
+    } catch {
+      // nothing shown there
+    }
+  }
 }

@@ -7,6 +7,7 @@
 
 import { system, world } from "@minecraft/server";
 import { coreCenter, coreLocation, isCoreBlock } from "./core.js";
+import { MOBS } from "./roster.js";
 import { attackers, mobModules } from "./spawner.js";
 import { blockKey, emit, overworld, pos, store, stored } from "./util.js";
 
@@ -253,6 +254,41 @@ const FIREBALL_SPEED = 1.2; // blocks per tick; fireballs fly straight
  * straight at the core. The vanilla ghast AI won't reliably fire on a
  * non-player target from where it floats, so this does it. The vanilla
  * fireball is not summonable; dm:fireball is a copy that is. */
+// summon: every interval_s, raise `count` swarmers around the mob (not
+// part of any wave, so a wave can be cleared while they still fight; they
+// count against max_alive).
+const MINION = "dm:swarmer";
+
+function summon(mob, state, params) {
+  const now = system.currentTick;
+  if (state.nextSummon === undefined) state.nextSummon = now + params.interval_s * 20;
+  if (now < state.nextSummon) return;
+  state.nextSummon = now + params.interval_s * 20;
+  const n = Math.min(params.count, getConfig().max_alive - attackers().length);
+  if (n <= 0) return;
+  const dim = mob.dimension;
+  const p = mob.location;
+  let raised = 0;
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    try {
+      const minion = dim.spawnEntity(MINION, { x: p.x + Math.cos(a) * 2, y: p.y + 0.5, z: p.z + Math.sin(a) * 2 });
+      minion.triggerEvent("dm:tgt_prioritized");
+      minion.setDynamicProperty("dtc:targeting", "prioritized");
+      minion.setDynamicProperty("dtc:modules", JSON.stringify(MOBS[MINION].modules));
+      raised++;
+    } catch {
+      // unloaded ground
+    }
+  }
+  try {
+    dim.spawnParticle("minecraft:soul_particle", { x: p.x, y: p.y + 1, z: p.z });
+  } catch {
+    // cosmetic
+  }
+  if (raised) emit("summon", { mob: mob.typeId, count: raised });
+}
+
 function artillery(mob, state, core, params) {
   const p = mob.location;
   const flat = Math.hypot(core.x - p.x, core.z - p.z);
@@ -338,15 +374,19 @@ function tick() {
   if (!loc) return;
   const core = { ...coreCenter(loc), y: loc.inside ? loc.y : loc.y + 1 };
   const seen = new Set();
-  const mobs = attackers().slice(0, getConfig().max_attackers);
+  // Bosses first, so a big wave never crowds them out of their modules.
+  const all = attackers();
+  const isBoss = (mob) => Boolean(MOBS[mob.typeId]?.boss);
+  const mobs = [...all.filter(isBoss), ...all.filter((m) => !isBoss(m))].slice(0, getConfig().max_attackers);
   for (const mob of mobs) {
     seen.add(mob.id);
     try {
       const state = sample(mob, core);
       if (state.stuckSince !== undefined) runModules(mob, state, core);
       // Ranged modules that fire whether or not the mob is stuck.
-      const params = mobModules(mob).artillery;
-      if (params) artillery(mob, state, core, params);
+      const modules = mobModules(mob);
+      if (modules.artillery) artillery(mob, state, core, modules.artillery);
+      if (modules.summon) summon(mob, state, modules.summon);
     } catch {
       // the mob unloaded or died mid-sample
     }

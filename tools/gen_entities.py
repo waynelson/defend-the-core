@@ -79,6 +79,35 @@ ROSTER.update({
     },
 })
 
+# Bosses: big, tough, a boss bar, knockback-resistant. Any wave group or DM
+# spawn can include them; scripts announce them (roster.js `boss`).
+ROSTER.update({
+    "warlord": {
+        "base": "zombie", "name": "Warlord", "health": 400, "speed": 0.21, "attack": 12, "boss": True,
+        "texture": "textures/entity/zombie/zombie", "families": ["zombie", "undead"], "scale": 2.4,
+        "collision": (1.4, 4.4), "equipment": "loot_tables/dm/warlord_gear.json",
+    },
+    "colossus": {
+        "base": "skeleton", "name": "Bone Colossus", "health": 300, "speed": 0.22, "boss": True,
+        "texture": "textures/entity/skeleton/stray", "families": ["skeleton", "undead"], "scale": 2.2,
+        "collision": (1.3, 4.2), "ranged": {"interval": 1.2, "range": 28},
+    },
+    "necromancer": {
+        "base": "skeleton", "name": "Necromancer", "health": 200, "speed": 0.24, "boss": True,
+        "texture": "textures/entity/skeleton/wither_skeleton", "families": ["skeleton", "undead"], "scale": 1.4,
+        "collision": (0.8, 2.7), "ranged": {"interval": 2.5, "range": 20},
+    },
+    "demolisher": {
+        "base": "creeper", "name": "Demolisher", "health": 150, "speed": 0.18, "boss": True,
+        "families": ["creeper"], "power": 7, "template": "creeper", "scale": 2.0, "collision": (1.2, 3.4),
+    },
+    "dread_ghast": {
+        "base": "ghast", "name": "Dread Ghast", "health": 250, "speed": 0.06, "boss": True,
+        "families": ["ghast", "dm_flyer"], "template": "ghast", "runtime": True, "targeting": "core_only",
+        "scale": 1.5, "collision": (6.0, 6.0),
+    },
+})
+
 FLYERS = ("ghast", "blaze", "phantom")
 # Walking parts of common_components() a flyer doesn't get.
 WALKING = (
@@ -310,6 +339,19 @@ def behavior(name, mob):
         }
     if mob.get("scale"):
         components["minecraft:scale"] = {"value": mob["scale"]}
+    if mob.get("collision"):
+        width, height = mob["collision"]
+        components["minecraft:collision_box"] = {"width": width, "height": height}
+    if mob.get("ranged") and "minecraft:behavior.ranged_attack" in components:
+        ranged = mob["ranged"]
+        components["minecraft:behavior.ranged_attack"].update({
+            "attack_interval": {"min": ranged["interval"], "max": ranged["interval"]},
+            "attack_range": {"min": 0.0, "max": float(ranged["range"])},
+        })
+    if mob.get("boss"):
+        components["minecraft:type_family"]["family"].insert(1, "dm_boss")
+        components["minecraft:boss"] = {"should_darken_sky": False, "hud_range": 64}
+        components["minecraft:knockback_resistance"] = {"value": 0.9}
 
     return {
         "format_version": "1.26.50",
