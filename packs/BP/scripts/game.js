@@ -5,6 +5,7 @@
 import { system, world } from "@minecraft/server";
 import { coreHp } from "./core.js";
 import { attackers, spawnCenter, spawnOne, validateSpawn } from "./spawner.js";
+import { getConfig } from "./breach.js";
 import { payWave } from "./economy.js";
 import { emit, store, stored } from "./util.js";
 
@@ -162,6 +163,11 @@ export function waveCommit(msg) {
   return { wave_id: wave.id, total: wave.total, wave_no: game.wave_no };
 }
 
+/** Spawns that are due but waiting for room under the cap. */
+function queuedCount(now = system.currentTick) {
+  return wave ? wave.pending.filter((item) => item.at <= now).length : 0;
+}
+
 function waveMobs() {
   return wave ? attackers().filter((mob) => mob.getDynamicProperty("dtc:wave") === wave.id) : [];
 }
@@ -177,13 +183,30 @@ function waveProgress() {
     failed: wave.failed,
     alive,
     killed: wave.spawned - alive,
+    queued: wave.committed ? queuedCount() : 0,
   };
 }
+
+// At most this many queued spawns per pass (every 5 ticks), so room made
+// by a burst of kills refills gradually.
+const SPAWNS_PER_PASS = 6;
 
 function spawnDue() {
   if (!wave?.committed || wave.done || game.paused_left !== undefined) return;
   const now = system.currentTick;
-  while (wave.pending.length && wave.pending[0].at <= now) {
+  if (!wave.pending.length || wave.pending[0].at > now) return;
+  // The live-attacker cap (DM setting max_alive): due spawns wait their turn.
+  const room = getConfig().max_alive - attackers().length;
+  if (room <= 0) {
+    if (!wave.capped) {
+      wave.capped = true;
+      emit("wave_capped", { wave_id: wave.id, max_alive: getConfig().max_alive, queued: queuedCount(now) });
+    }
+    return;
+  }
+  let budget = Math.min(room, SPAWNS_PER_PASS);
+  while (budget > 0 && wave.pending.length && wave.pending[0].at <= now) {
+    budget--;
     const item = wave.pending.shift();
     let mob;
     try {

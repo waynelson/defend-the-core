@@ -239,6 +239,8 @@ const handlers = {
   control(msg) {
     return control(msg.cmd);
   },
+  // Breach and spawning settings: {breach_mult?, decay_rate?,
+  // max_attackers?, max_alive?, hardness?}.
   config(msg) {
     return setConfig(msg);
   },

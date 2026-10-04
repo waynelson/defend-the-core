@@ -15,6 +15,7 @@ const DEFAULT_CONFIG = {
   breach_mult: 1.0, // scales every block's threshold
   decay_rate: 0.25, // damage removed per second from every damaged block
   max_attackers: 60, // attackers tracked for stuck detection
+  max_alive: 150, // wave spawns wait while this many attackers are alive
   hardness: {}, // block id -> seconds, overrides the table below
 };
 
@@ -78,6 +79,7 @@ export function setConfig(changes) {
   if (changes.breach_mult !== undefined) config.breach_mult = clamp("breach_mult", changes.breach_mult, 0.05, 20);
   if (changes.decay_rate !== undefined) config.decay_rate = clamp("decay_rate", changes.decay_rate, 0, 10);
   if (changes.max_attackers !== undefined) config.max_attackers = clamp("max_attackers", changes.max_attackers, 1, 200);
+  if (changes.max_alive !== undefined) config.max_alive = Math.round(clamp("max_alive", changes.max_alive, 5, 400));
   if (changes.hardness !== undefined) {
     for (const [id, seconds] of Object.entries(changes.hardness)) {
       if (seconds === null) delete config.hardness[id];

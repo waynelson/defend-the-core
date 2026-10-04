@@ -5,7 +5,7 @@ describes what exists, where it lives, how to change and ship it, the rules
 of the road, and what's next. **This file is authoritative; README.md is out
 of date** (it still describes the 0.6 Quartermaster and depot).
 
-Last updated: 2026-10-04, add-on v0.7.1 on beta, `main` at b581900 on dev.
+Last updated: 2026-10-04, add-on v0.7.2 on beta and dev.
 
 ---
 
@@ -217,7 +217,10 @@ script, run it, never hand-edit the output.** The main pack uses stable
 - **Auto DM defaults:** prep 180 s, intermission 90 s, 10 waves, difficulty
   2 + 0.7/wave (cap 10), flyers on, supply drop each intermission, depot
   restock every 3 waves, a tower every 2 intermissions, wave timeout 420 s.
-  Biggest default wave ≈ 35 mobs.
+  Biggest default wave ≈ 35 mobs. **Max mobs alive** (`config max_alive`,
+  default 150): wave spawns past the cap queue and come in (≤ 6 per 5 ticks)
+  as others die; `wave_capped` is emitted once per wave. DM `spawn` commands
+  ignore the cap.
 - **Attackers:** zombie, skeleton, swarmer, digger, sapper, siege skeleton,
   phantom, blaze, ghast (ghast targets the core only; artillery module).
 - **Fresh start each game:** 1,000 coins (`start_coins`) and 2 skill points
@@ -342,12 +345,10 @@ results: `dist/stress_before.log`, `dist/stress.json` (not committed).
 
 ## 10. Current state
 
-- **Beta:** v0.7.1 (tag `v0.7.1`). Natural spawns turned off by command
-  (persisted in the world); the gamerule-on-load code isn't on beta yet.
-- **Dev:** `main` = v0.7.1 + world rules on load, turret arrow cleanup,
-  `dm:perf`, `dm:stress`, `tools/stress.py`, the per-player HUD (level, XP,
-  skill points, skill levels on the action bar), starting values 1,000
-  coins / 2 SP (beta still starts at 200 / 0). Unreleased.
+- **Beta:** v0.7.2 (tag `v0.7.2`): world rules on load, turret arrow
+  cleanup, per-player HUD (level, XP, skill points, skill levels), 1,000
+  starting coins / 2 SP, max mobs alive cap (150), `dm:perf`, `dm:stress`.
+- **Dev:** same as beta unless noted in later commits.
 - **Fork:** `local/nelson-next` c0c1e3ff (team share of bounties). The
   running panel only has it after Wayne restarts the Crafty service.
 - **Untested in-game:** every vendor menu (Engineer, Mason, Provisioner,
@@ -360,13 +361,9 @@ results: `dist/stress_before.log`, `dist/stress.json` (not committed).
 
 Near term:
 1. Re-run `python tools/stress.py run turrets` to measure the arrow cleanup.
-2. Cap live attackers (≈ 150) in the auto DM / wave spawner so a big wave
-   can't push the server below 15 TPS.
-3. Release v0.7.2 (world rules, arrow cleanup, HUD, starting values) when
-   Wayne asks.
-4. Rewrite README.md from this document.
-5. Show `perf` (TPS) on the DM tab next to CPU/memory.
-6. Clean up the dev stress arena (or re-run `dm:setup` on a fresh dev world).
+2. Rewrite README.md from this document.
+3. Show `perf` (TPS) on the DM tab next to CPU/memory.
+4. Clean up the dev stress arena (or re-run `dm:setup` on a fresh dev world).
 
 Ideas discussed, not built: skill-point respec, selling items back, team
 coin pooling, more turret types, sweeping DM tools for structures.
