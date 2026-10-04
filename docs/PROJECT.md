@@ -165,7 +165,7 @@ script, run it, never hand-edit the output.** The main pack uses stable
 | `core.js` | The core entity on a beacon: place, clear, HP, label |
 | `game.js` | Phases (setup, prep, wave, intermission, won, lost), waves (begin/group/commit), HUD, `hooks` (timerDone, waveCleared, lost, newGame), `resetGame`, `gameNo` |
 | `spawner.js` / `roster.js` | Spawning, spawn points, `MOBS` roster and default targeting |
-| `breach.js` | Block damage map, stuck detection (first `max_attackers`=60 mobs), modules: dig, detonate_stuck, siege_arrow, artillery |
+| `breach.js` | Block damage map (all attacker block damage × `damage_mult`, default 8), stuck detection (first `max_attackers`=60 mobs, bosses first), modules: dig, detonate_stuck, siege_arrow, artillery, summon |
 | `auto.js` | Auto DM: prep → generated wave → intermission (supply drop, restock, tower) → … ; watchdog and wave timeout |
 | `economy.js` | `coins` scoreboard, settings, wave pay, `BOUNTY`, `payBounty` (full to the final blow, `bounty_share` to everyone else) |
 | `progression.js` | XP, levels (instant level-ups), skill points (`dm_xp`, `dm_level`, `dm_sp`), round-end XP |

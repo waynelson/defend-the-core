@@ -14,6 +14,7 @@ import { blockKey, emit, overworld, pos, store, stored } from "./util.js";
 const CONFIG_PROP = "dtc:config";
 const DEFAULT_CONFIG = {
   breach_mult: 1.0, // scales every block's threshold
+  damage_mult: 8, // scales all damage attackers deal to blocks (digging, siege arrows)
   decay_rate: 0.25, // damage removed per second from every damaged block
   max_attackers: 60, // attackers tracked for stuck detection
   max_alive: 150, // wave spawns wait while this many attackers are alive
@@ -78,6 +79,7 @@ export function getConfig() {
 export function setConfig(changes) {
   const config = getConfig();
   if (changes.breach_mult !== undefined) config.breach_mult = clamp("breach_mult", changes.breach_mult, 0.05, 20);
+  if (changes.damage_mult !== undefined) config.damage_mult = clamp("damage_mult", changes.damage_mult, 0.1, 50);
   if (changes.decay_rate !== undefined) config.decay_rate = clamp("decay_rate", changes.decay_rate, 0, 10);
   if (changes.max_attackers !== undefined) config.max_attackers = clamp("max_attackers", changes.max_attackers, 1, 200);
   if (changes.max_alive !== undefined) config.max_alive = Math.round(clamp("max_alive", changes.max_alive, 5, 400));
@@ -124,7 +126,7 @@ export function addDamage(block, amount, source) {
   const key = blockKey(block.location);
   let entry = damageMap.get(key);
   if (!entry || entry.type !== block.typeId) entry = { damage: 0, type: block.typeId };
-  entry.damage += amount;
+  entry.damage += amount * config.damage_mult;
   const threshold = hardnessSeconds(block.typeId, config) * config.breach_mult;
   const dim = block.dimension;
   const center = block.center();
