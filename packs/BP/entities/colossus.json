@@ -227,6 +227,230 @@
             }
           ]
         }
+      },
+      "dm:tgt_sector_0": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 128,
+          "entity_types": [
+            {
+              "filters": {
+                "all_of": [
+                  {
+                    "test": "is_family",
+                    "subject": "other",
+                    "value": "dm_waypoint"
+                  },
+                  {
+                    "test": "has_tag",
+                    "subject": "other",
+                    "value": "sector_0"
+                  }
+                ]
+              },
+              "max_dist": 128,
+              "must_see": false
+            }
+          ]
+        }
+      },
+      "dm:tgt_sector_1": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 128,
+          "entity_types": [
+            {
+              "filters": {
+                "all_of": [
+                  {
+                    "test": "is_family",
+                    "subject": "other",
+                    "value": "dm_waypoint"
+                  },
+                  {
+                    "test": "has_tag",
+                    "subject": "other",
+                    "value": "sector_1"
+                  }
+                ]
+              },
+              "max_dist": 128,
+              "must_see": false
+            }
+          ]
+        }
+      },
+      "dm:tgt_sector_2": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 128,
+          "entity_types": [
+            {
+              "filters": {
+                "all_of": [
+                  {
+                    "test": "is_family",
+                    "subject": "other",
+                    "value": "dm_waypoint"
+                  },
+                  {
+                    "test": "has_tag",
+                    "subject": "other",
+                    "value": "sector_2"
+                  }
+                ]
+              },
+              "max_dist": 128,
+              "must_see": false
+            }
+          ]
+        }
+      },
+      "dm:tgt_sector_3": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 128,
+          "entity_types": [
+            {
+              "filters": {
+                "all_of": [
+                  {
+                    "test": "is_family",
+                    "subject": "other",
+                    "value": "dm_waypoint"
+                  },
+                  {
+                    "test": "has_tag",
+                    "subject": "other",
+                    "value": "sector_3"
+                  }
+                ]
+              },
+              "max_dist": 128,
+              "must_see": false
+            }
+          ]
+        }
+      },
+      "dm:tgt_sector_4": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 128,
+          "entity_types": [
+            {
+              "filters": {
+                "all_of": [
+                  {
+                    "test": "is_family",
+                    "subject": "other",
+                    "value": "dm_waypoint"
+                  },
+                  {
+                    "test": "has_tag",
+                    "subject": "other",
+                    "value": "sector_4"
+                  }
+                ]
+              },
+              "max_dist": 128,
+              "must_see": false
+            }
+          ]
+        }
+      },
+      "dm:tgt_sector_5": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 128,
+          "entity_types": [
+            {
+              "filters": {
+                "all_of": [
+                  {
+                    "test": "is_family",
+                    "subject": "other",
+                    "value": "dm_waypoint"
+                  },
+                  {
+                    "test": "has_tag",
+                    "subject": "other",
+                    "value": "sector_5"
+                  }
+                ]
+              },
+              "max_dist": 128,
+              "must_see": false
+            }
+          ]
+        }
+      },
+      "dm:tgt_sector_6": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 128,
+          "entity_types": [
+            {
+              "filters": {
+                "all_of": [
+                  {
+                    "test": "is_family",
+                    "subject": "other",
+                    "value": "dm_waypoint"
+                  },
+                  {
+                    "test": "has_tag",
+                    "subject": "other",
+                    "value": "sector_6"
+                  }
+                ]
+              },
+              "max_dist": 128,
+              "must_see": false
+            }
+          ]
+        }
+      },
+      "dm:tgt_sector_7": {
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 2,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 128,
+          "entity_types": [
+            {
+              "filters": {
+                "all_of": [
+                  {
+                    "test": "is_family",
+                    "subject": "other",
+                    "value": "dm_waypoint"
+                  },
+                  {
+                    "test": "has_tag",
+                    "subject": "other",
+                    "value": "sector_7"
+                  }
+                ]
+              },
+              "max_dist": 128,
+              "must_see": false
+            }
+          ]
+        }
       }
     },
     "events": {
@@ -241,7 +465,15 @@
         "remove": {
           "component_groups": [
             "dm:tgt_prioritized",
-            "dm:tgt_nearest"
+            "dm:tgt_nearest",
+            "dm:tgt_sector_0",
+            "dm:tgt_sector_1",
+            "dm:tgt_sector_2",
+            "dm:tgt_sector_3",
+            "dm:tgt_sector_4",
+            "dm:tgt_sector_5",
+            "dm:tgt_sector_6",
+            "dm:tgt_sector_7"
           ]
         },
         "add": {
@@ -254,7 +486,15 @@
         "remove": {
           "component_groups": [
             "dm:tgt_core_only",
-            "dm:tgt_nearest"
+            "dm:tgt_nearest",
+            "dm:tgt_sector_0",
+            "dm:tgt_sector_1",
+            "dm:tgt_sector_2",
+            "dm:tgt_sector_3",
+            "dm:tgt_sector_4",
+            "dm:tgt_sector_5",
+            "dm:tgt_sector_6",
+            "dm:tgt_sector_7"
           ]
         },
         "add": {
@@ -267,12 +507,188 @@
         "remove": {
           "component_groups": [
             "dm:tgt_core_only",
-            "dm:tgt_prioritized"
+            "dm:tgt_prioritized",
+            "dm:tgt_sector_0",
+            "dm:tgt_sector_1",
+            "dm:tgt_sector_2",
+            "dm:tgt_sector_3",
+            "dm:tgt_sector_4",
+            "dm:tgt_sector_5",
+            "dm:tgt_sector_6",
+            "dm:tgt_sector_7"
           ]
         },
         "add": {
           "component_groups": [
             "dm:tgt_nearest"
+          ]
+        }
+      },
+      "dm:tgt_sector_0": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_core_only",
+            "dm:tgt_prioritized",
+            "dm:tgt_nearest",
+            "dm:tgt_sector_1",
+            "dm:tgt_sector_2",
+            "dm:tgt_sector_3",
+            "dm:tgt_sector_4",
+            "dm:tgt_sector_5",
+            "dm:tgt_sector_6",
+            "dm:tgt_sector_7"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_sector_0"
+          ]
+        }
+      },
+      "dm:tgt_sector_1": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_core_only",
+            "dm:tgt_prioritized",
+            "dm:tgt_nearest",
+            "dm:tgt_sector_0",
+            "dm:tgt_sector_2",
+            "dm:tgt_sector_3",
+            "dm:tgt_sector_4",
+            "dm:tgt_sector_5",
+            "dm:tgt_sector_6",
+            "dm:tgt_sector_7"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_sector_1"
+          ]
+        }
+      },
+      "dm:tgt_sector_2": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_core_only",
+            "dm:tgt_prioritized",
+            "dm:tgt_nearest",
+            "dm:tgt_sector_0",
+            "dm:tgt_sector_1",
+            "dm:tgt_sector_3",
+            "dm:tgt_sector_4",
+            "dm:tgt_sector_5",
+            "dm:tgt_sector_6",
+            "dm:tgt_sector_7"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_sector_2"
+          ]
+        }
+      },
+      "dm:tgt_sector_3": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_core_only",
+            "dm:tgt_prioritized",
+            "dm:tgt_nearest",
+            "dm:tgt_sector_0",
+            "dm:tgt_sector_1",
+            "dm:tgt_sector_2",
+            "dm:tgt_sector_4",
+            "dm:tgt_sector_5",
+            "dm:tgt_sector_6",
+            "dm:tgt_sector_7"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_sector_3"
+          ]
+        }
+      },
+      "dm:tgt_sector_4": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_core_only",
+            "dm:tgt_prioritized",
+            "dm:tgt_nearest",
+            "dm:tgt_sector_0",
+            "dm:tgt_sector_1",
+            "dm:tgt_sector_2",
+            "dm:tgt_sector_3",
+            "dm:tgt_sector_5",
+            "dm:tgt_sector_6",
+            "dm:tgt_sector_7"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_sector_4"
+          ]
+        }
+      },
+      "dm:tgt_sector_5": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_core_only",
+            "dm:tgt_prioritized",
+            "dm:tgt_nearest",
+            "dm:tgt_sector_0",
+            "dm:tgt_sector_1",
+            "dm:tgt_sector_2",
+            "dm:tgt_sector_3",
+            "dm:tgt_sector_4",
+            "dm:tgt_sector_6",
+            "dm:tgt_sector_7"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_sector_5"
+          ]
+        }
+      },
+      "dm:tgt_sector_6": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_core_only",
+            "dm:tgt_prioritized",
+            "dm:tgt_nearest",
+            "dm:tgt_sector_0",
+            "dm:tgt_sector_1",
+            "dm:tgt_sector_2",
+            "dm:tgt_sector_3",
+            "dm:tgt_sector_4",
+            "dm:tgt_sector_5",
+            "dm:tgt_sector_7"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_sector_6"
+          ]
+        }
+      },
+      "dm:tgt_sector_7": {
+        "remove": {
+          "component_groups": [
+            "dm:tgt_core_only",
+            "dm:tgt_prioritized",
+            "dm:tgt_nearest",
+            "dm:tgt_sector_0",
+            "dm:tgt_sector_1",
+            "dm:tgt_sector_2",
+            "dm:tgt_sector_3",
+            "dm:tgt_sector_4",
+            "dm:tgt_sector_5",
+            "dm:tgt_sector_6"
+          ]
+        },
+        "add": {
+          "component_groups": [
+            "dm:tgt_sector_7"
           ]
         }
       }

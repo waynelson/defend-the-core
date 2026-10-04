@@ -84,7 +84,8 @@ function shuffle(list) {
 
 /** Where this wave comes from: some of the saved spawn points. */
 function places(d) {
-  const sides = Math.min(4, 1 + Math.floor(d / 3));
+  // At least two sides, so a wave never comes down one path.
+  const sides = Math.min(4, 2 + Math.floor(d / 3));
   let names = Object.keys(spawnPoints());
   if (!names.length) {
     try {

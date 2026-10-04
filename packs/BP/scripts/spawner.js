@@ -3,7 +3,11 @@
 import { world } from "@minecraft/server";
 import { coreLocation } from "./core.js";
 import { MOBS, TARGETING, resolveModules } from "./roster.js";
+import { assignBreaker } from "./sectors.js";
 import { emit, overworld, store, stored } from "./util.js";
+
+const ARC = 16; // blocks across the spawn arc
+const ARC_DEPTH = 4;
 
 export const ATTACKER_FAMILY = "dm_attacker";
 const POINTS_PROP = "dtc:points"; // {name: {x, z}}
@@ -164,9 +168,25 @@ export function validateSpawn(spec) {
 /** Spawns one attacker near `center` on the surface. Returns the entity, or
  * undefined if that spot isn't loaded yet. */
 export function spawnOne(spec, center, modules, tags = {}) {
-  const spread = spec.spread ?? 3;
-  const x = Math.floor(center.x + (Math.random() - 0.5) * spread);
-  const z = Math.floor(center.z + (Math.random() - 0.5) * spread);
+  // A wide arc facing the core (ARC blocks across, a little depth) so a
+  // group doesn't walk in single file; an explicit `spread` keeps the old
+  // square scatter.
+  let x;
+  let z;
+  const core = coreLocation();
+  if (spec.spread === undefined && core) {
+    const dx = center.x - core.x;
+    const dz = center.z - core.z;
+    const len = Math.hypot(dx, dz) || 1;
+    const along = (Math.random() - 0.5) * ARC;
+    const depth = (Math.random() - 0.5) * ARC_DEPTH;
+    x = Math.floor(center.x + (-dz / len) * along + (dx / len) * depth);
+    z = Math.floor(center.z + (dx / len) * along + (dz / len) * depth);
+  } else {
+    const spread = spec.spread ?? 3;
+    x = Math.floor(center.x + (Math.random() - 0.5) * spread);
+    z = Math.floor(center.z + (Math.random() - 0.5) * spread);
+  }
   const dim = overworld();
   if (!dim.isChunkLoaded({ x, y: 0, z })) return undefined;
   const top = dim.getTopmostBlock({ x, z });
@@ -178,6 +198,7 @@ export function spawnOne(spec, center, modules, tags = {}) {
   mob.setDynamicProperty("dtc:targeting", targeting);
   mob.setDynamicProperty("dtc:modules", JSON.stringify(modules));
   for (const [key, value] of Object.entries(tags)) mob.setDynamicProperty(key, value);
+  assignBreaker(mob);
   if (MOBS[spec.mob]?.boss) {
     world.sendMessage(`§4§l[BOSS]§r §c${MOBS[spec.mob].label} has joined the attack!`);
     emit("boss_spawned", { mob: spec.mob, at: { x, y: Math.round(mob.location.y), z } });

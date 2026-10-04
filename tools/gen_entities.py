@@ -168,8 +168,36 @@ def targeting_groups(flyer=False):
     }
 
 
-def targeting_events():
+# Wall-breakers (scripts/sectors.js): a ground attacker sent to a sector
+# targets that sector's waypoint (an invisible dm:waypoint tagged
+# sector_<n>, just outside the defences) instead of the core, then is
+# switched back to core targeting there and digs in.
+SECTORS = 8
+
+
+def sector_groups():
+    return {
+        f"dm:tgt_sector_{n}": {
+            "minecraft:behavior.nearest_attackable_target": {
+                "priority": 2, "must_see": False, "reselect_targets": True, "within_radius": 128,
+                "entity_types": [{
+                    "filters": {"all_of": [
+                        {"test": "is_family", "subject": "other", "value": "dm_waypoint"},
+                        {"test": "has_tag", "subject": "other", "value": f"sector_{n}"},
+                    ]},
+                    "max_dist": 128,
+                    "must_see": False,
+                }],
+            }
+        }
+        for n in range(SECTORS)
+    }
+
+
+def targeting_events(sectors=False):
     names = ["dm:tgt_core_only", "dm:tgt_prioritized", "dm:tgt_nearest"]
+    if sectors:
+        names += [f"dm:tgt_sector_{n}" for n in range(SECTORS)]
     return {
         name: {
             "remove": {"component_groups": [n for n in names if n != name]},
@@ -226,7 +254,11 @@ def behavior(name, mob):
     groups = targeting_groups(flyer=mob["base"] in FLYERS)
     default = mob.get("targeting", "prioritized")
     events = {"minecraft:entity_spawned": {"add": {"component_groups": [f"dm:tgt_{default}"]}}}
-    events.update(targeting_events())
+    # Ground attackers can be sent to a sector as wall-breakers.
+    ground = mob["base"] not in FLYERS and not mob.get("guard")
+    if ground:
+        groups.update(sector_groups())
+    events.update(targeting_events(sectors=ground))
     if mob.get("guard"):
         # Defense mode: hold position, fight players who come near, ignore
         # the core. (scripts/tower.js leashes them to their post.)
@@ -469,6 +501,7 @@ def main():
     lines.append("entity.dm:vendor.name=Vendor")
     lines.append("action.interact.dtc_turret=Repair / Upgrade")
     lines.append("entity.dm:label.name=Label")
+    lines.append("entity.dm:waypoint.name=Waypoint")
     for item_id, item in ITEMS.items():
         lines.append(f"item.dm:{item_id}={item['name']}")
     lang.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -626,6 +659,26 @@ def label():
     }
 
 
+def waypoint():
+    """An invisible, untouchable marker wall-breakers path to."""
+    return {
+        "format_version": "1.26.50",
+        "minecraft:entity": {
+            "description": {"identifier": "dm:waypoint", "is_summonable": True, "is_spawnable": False},
+            "components": {
+                "minecraft:type_family": {"family": ["dm_waypoint", "inanimate"]},
+                "minecraft:health": {"value": 1, "max": 1},
+                "minecraft:collision_box": {"width": 0.1, "height": 0.1},
+                "minecraft:physics": {"has_gravity": False, "has_collision": False},
+                "minecraft:knockback_resistance": {"value": 1.0},
+                "minecraft:persistent": {},
+                "minecraft:fire_immune": {},
+                "minecraft:damage_sensor": {"triggers": [{"deals_damage": "no"}]},
+            },
+        },
+    }
+
+
 def label_client():
     """No render controllers: nothing is drawn but the name tag."""
     return {
@@ -707,6 +760,10 @@ def write_defenses():
     write(BP / "vendor.json", vendor())
     write(BP / "label.json", label())
     write(RP / "label.entity.json", label_client())
+    write(BP / "waypoint.json", waypoint())
+    client = label_client()
+    client["minecraft:client_entity"]["description"]["identifier"] = "dm:waypoint"
+    write(RP / "waypoint.entity.json", client)
     write(RP / "vendor.entity.json", renamed_template("wandering_trader", "dm:vendor"))
     items = ROOT / "packs/BP/items"
     items.mkdir(exist_ok=True)

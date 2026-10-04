@@ -21,6 +21,7 @@ import { blockPrices } from "./mason.js";
 import { buildMarket } from "./market.js";
 import { setPerf, stress } from "./perf.js";
 import { boardsStatus, recordKill, startBoards } from "./boards.js";
+import { refreshSectors, sectorStatus, startSectors } from "./sectors.js";
 import { raiseTower, removeTower, startTowers, towerStatus } from "./tower.js";
 import { startRain } from "./rewards.js";
 import { SHOP, priceOf, startShop } from "./shop.js";
@@ -269,6 +270,11 @@ const handlers = {
   depot_restock() {
     return restockDepot();
   },
+  // Wall-breaker sectors: {refresh?: true}; the waypoints and breakers out.
+  sectors(msg) {
+    if (msg.refresh) refreshSectors();
+    return sectorStatus();
+  },
   // The mall's leaderboards: this game's kills and coins earned.
   boards() {
     return boardsStatus();
@@ -451,6 +457,7 @@ world.afterEvents.worldLoad.subscribe(() => {
   hooks.newGame.push(newGameForAll);
   startTowers();
   startBoards();
+  startSectors();
   // Every cleared wave is a round survived, whoever launched it.
   hooks.waveCleared.push((waveNo) => roundEnd(waveNo));
   // Locked armour is mended (or replaced, if it broke) after every wave.
