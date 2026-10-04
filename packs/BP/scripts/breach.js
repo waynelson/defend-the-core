@@ -16,7 +16,8 @@ const DEFAULT_CONFIG = {
   breach_mult: 1.0, // scales every block's threshold
   damage_mult: 8, // scales all damage attackers deal to blocks (digging, siege arrows)
   decay_rate: 0.25, // damage removed per second from every damaged block
-  max_attackers: 60, // attackers tracked for stuck detection
+  max_attackers: 150, // attackers tracked for stuck detection and climbing
+  climb_height: 2, // ground attackers hop obstacles up to this many blocks (0: off)
   max_alive: 150, // wave spawns wait while this many attackers are alive
   hardness: {}, // block id -> seconds, overrides the table below
 };
@@ -82,6 +83,7 @@ export function setConfig(changes) {
   if (changes.damage_mult !== undefined) config.damage_mult = clamp("damage_mult", changes.damage_mult, 0.1, 50);
   if (changes.decay_rate !== undefined) config.decay_rate = clamp("decay_rate", changes.decay_rate, 0, 10);
   if (changes.max_attackers !== undefined) config.max_attackers = clamp("max_attackers", changes.max_attackers, 1, 200);
+  if (changes.climb_height !== undefined) config.climb_height = Math.round(clamp("climb_height", changes.climb_height, 0, 4));
   if (changes.max_alive !== undefined) config.max_alive = Math.round(clamp("max_alive", changes.max_alive, 5, 400));
   if (changes.hardness !== undefined) {
     for (const [id, seconds] of Object.entries(changes.hardness)) {
@@ -375,6 +377,69 @@ function lobArrow(mob, core) {
   tryFx(() => mob.dimension.playSound("random.bow", from));
 }
 
+// Climbing: a ground attacker that has barely moved for about a second
+// hops the obstacle in front of it (toward the core) if it is no taller than
+// climb_height and has room on top; a taller one is a wall, left to the
+// breach modules (so walls taller than climb_height still hold). One that
+// stalls with nothing in front (the pathfinder gave up on rough ground) gets
+// a nudge forward.
+const CLIMB_SAMPLES = 3; // 1 s of samples
+const CLIMB_MOVED = 0.5; // blocks moved over them that count as stalled
+const CLIMB_COOLDOWN = 20; // ticks between hops
+const HOP_UP = [0, 0.52, 0.72, 0.88, 1.0]; // upward impulse by obstacle height
+const HOP_FORWARD = 0.22;
+const NUDGE_FORWARD = 0.3;
+// Far from the core a tall obstacle is terrain (cliffs, pits), not a
+// player's wall: a mob stuck that far out for a while is lifted onto it.
+const TERRAIN_ZONE = 24; // blocks from the core
+const TERRAIN_STUCK_TICKS = 160; // 8 s
+const TERRAIN_MAX = 6; // blocks
+
+function solid(block) {
+  return Boolean(block) && !block.isAir && !block.isLiquid && !PASSABLE_KEYWORDS.some((w) => block.typeId.includes(w));
+}
+
+function climb(mob, state, core, maxHeight) {
+  const h = state.history;
+  if (h.length < CLIMB_SAMPLES) return;
+  const recent = h[h.length - CLIMB_SAMPLES];
+  const p = mob.location;
+  if (Math.hypot(p.x - recent.x, p.z - recent.z) >= CLIMB_MOVED) return;
+  const dx = core.x - p.x;
+  const dz = core.z - p.z;
+  const flat = Math.hypot(dx, dz);
+  if (flat < REACH + 1) return; // at the core: attacking, not stuck
+  const now = system.currentTick;
+  if (now - (state.lastHop ?? -CLIMB_COOLDOWN) < CLIMB_COOLDOWN) return;
+  const ux = dx / flat;
+  const uz = dz / flat;
+  const dim = mob.dimension;
+  const feet = Math.floor(p.y + 0.01);
+  const ahead = { x: Math.floor(p.x + ux * 0.9), z: Math.floor(p.z + uz * 0.9) };
+  const terrain = flat > TERRAIN_ZONE && state.stuckSince !== undefined && now - state.stuckSince >= TERRAIN_STUCK_TICKS;
+  const limit = terrain ? TERRAIN_MAX : maxHeight;
+  let height = 0;
+  while (height <= limit && solid(dim.getBlock({ x: ahead.x, y: feet + height, z: ahead.z }))) height++;
+  if (height > limit) return; // a wall: breach modules' job
+  if (height > maxHeight) {
+    // Terrain too tall to hop: set it on top.
+    for (const dy of [0, 1]) if (solid(dim.getBlock({ x: ahead.x, y: feet + height + dy, z: ahead.z }))) return;
+    state.lastHop = now;
+    state.stuckSince = undefined;
+    tryFx(() => mob.teleport({ x: ahead.x + 0.5, y: feet + height, z: ahead.z + 0.5 }));
+    return;
+  }
+  if (height > 0) {
+    // Room on top for the mob to stand.
+    for (const dy of [0, 1]) if (solid(dim.getBlock({ x: ahead.x, y: feet + height + dy, z: ahead.z }))) return;
+    state.lastHop = now;
+    tryFx(() => mob.applyImpulse({ x: ux * HOP_FORWARD, y: HOP_UP[height], z: uz * HOP_FORWARD }));
+    return;
+  }
+  state.lastHop = now;
+  tryFx(() => mob.applyImpulse({ x: ux * NUDGE_FORWARD, y: 0.25, z: uz * NUDGE_FORWARD }));
+}
+
 function runModules(mob, state, core) {
   const modules = mobModules(mob);
   if (modules.dig) {
@@ -416,7 +481,9 @@ function tick() {
   // Bosses first, so a big wave never crowds them out of their modules.
   const all = attackers();
   const isBoss = (mob) => Boolean(MOBS[mob.typeId]?.boss);
-  const mobs = [...all.filter(isBoss), ...all.filter((m) => !isBoss(m))].slice(0, getConfig().max_attackers);
+  const config = getConfig();
+  const climbHeight = config.climb_height ?? 2;
+  const mobs = [...all.filter(isBoss), ...all.filter((m) => !isBoss(m))].slice(0, config.max_attackers);
   for (const mob of mobs) {
     seen.add(mob.id);
     try {
@@ -427,6 +494,7 @@ function tick() {
       if (modules.artillery) artillery(mob, state, core, modules.artillery);
       if (modules.summon) summon(mob, state, modules.summon);
       if (modules.fly_in) flyIn(mob, state, core, modules.fly_in);
+      else if (climbHeight > 0 && !mob.matches({ families: ["dm_flyer"] })) climb(mob, state, core, climbHeight);
     } catch {
       // the mob unloaded or died mid-sample
     }

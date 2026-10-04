@@ -113,6 +113,7 @@ FLYERS = ("ghast", "blaze", "phantom")
 WALKING = (
     "minecraft:navigation.walk", "minecraft:movement.basic", "minecraft:jump.static",
     "minecraft:can_climb", "minecraft:behavior.random_stroll", "minecraft:pushable_by_block",
+    "minecraft:variable_max_auto_step",
 )
 
 # ---------------------------------------------------------------- behavior
@@ -204,6 +205,8 @@ def common_components(mob):
         },
         "minecraft:can_climb": {},
         "minecraft:jump.static": {},
+        # Walk straight up single blocks (players and most mobs need a jump).
+        "minecraft:variable_max_auto_step": {"base_value": 1.0625, "jump_prevented_value": 0.5625},
         "minecraft:movement.basic": {},
         "minecraft:navigation.walk": {"can_walk": True, "is_amphibious": True, "can_pass_doors": True},
         "minecraft:physics": {},
