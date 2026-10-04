@@ -15,7 +15,7 @@ import { econ, grantCoins, payBounty, setEconomy, startEconomy } from "./economy
 import { playerList, startPlayers } from "./players.js";
 import { grantProgress, killXp, progressionConfig, roundEnd, setProgression, startProgression } from "./progression.js";
 import { autoStatus, setAuto, startAuto } from "./auto.js";
-import { startLoadout } from "./loadout.js";
+import { refreshArmor, startLoadout } from "./loadout.js";
 import { newGameForAll, startStats } from "./stats.js";
 import { blockPrices } from "./mason.js";
 import { raiseTower, removeTower, startTowers, towerStatus } from "./tower.js";
@@ -377,6 +377,8 @@ world.afterEvents.worldLoad.subscribe(() => {
   startTowers();
   // Every cleared wave is a round survived, whoever launched it.
   hooks.waveCleared.push((waveNo) => roundEnd(waveNo));
+  // Locked armour is mended (or replaced, if it broke) after every wave.
+  hooks.waveCleared.push(() => world.getAllPlayers().forEach(refreshArmor));
   startAuto();
   emit("loaded", { protocol: PROTOCOL, core: coreLocation() ?? null, ...gameStatus() });
 });

@@ -1,13 +1,12 @@
-// Every player's spawn kit: armour at their Armor skill level, a stone
-// sword, a bow and arrows. Respawns top it up without replacing better
-// armour or weapons they bought.
+// Every player's spawn kit: armour at their Armor skill level (free, locked
+// to them), a stone sword, a bow and arrows. Respawns top it up without
+// replacing weapons they bought.
 
-import { EquipmentSlot, ItemStack, world } from "@minecraft/server";
+import { EquipmentSlot, ItemLockMode, ItemStack, world } from "@minecraft/server";
 import { statOf } from "./stats.js";
 
 /** Armour tiers by Armor skill level. */
 export const ARMOR_TIERS = ["leather", "chainmail", "iron", "diamond", "netherite"];
-const RANK = { leather: 1, golden: 1.5, chainmail: 2, iron: 3, diamond: 4, netherite: 5 };
 const SLOTS = [
   [EquipmentSlot.Head, "helmet"],
   [EquipmentSlot.Chest, "chestplate"],
@@ -16,20 +15,35 @@ const SLOTS = [
 ];
 const KIT_ARROWS = 32;
 
-function rankOf(stack) {
-  if (!stack) return 0;
-  return RANK[stack.typeId.replace("minecraft:", "").split("_")[0]] ?? 0;
-}
-
-/** Wear the tier's armour in every slot that is empty or holds something
- * weaker (better armour they bought stays on). */
+/** Wear the Armor level's tier in every slot, locked there (it can't be
+ * taken off, dropped, stored or traded) and kept on death. Anything else in
+ * an armour slot goes back to the inventory. */
 export function refreshArmor(player) {
   const equippable = player.getComponent("minecraft:equippable");
   if (!equippable) return;
   const material = ARMOR_TIERS[statOf(player, "armor") - 1];
+  const inventory = player.getComponent("minecraft:inventory")?.container;
   for (const [slot, piece] of SLOTS) {
-    if (rankOf(equippable.getEquipment(slot)) >= RANK[material]) continue;
-    equippable.setEquipment(slot, new ItemStack(`minecraft:${material}_${piece}`, 1));
+    const id = `minecraft:${material}_${piece}`;
+    const current = equippable.getEquipment(slot);
+    if (current?.typeId === id && current.lockMode === ItemLockMode.slot) {
+      // Mended, so it never wears through.
+      const durability = current.getComponent("minecraft:durability");
+      if (durability && durability.damage > 0) {
+        durability.damage = 0;
+        equippable.setEquipment(slot, current);
+      }
+      continue;
+    }
+    if (current && current.lockMode !== ItemLockMode.slot) {
+      const left = inventory?.addItem(current);
+      if (left) player.dimension.spawnItem(left, player.location);
+    }
+    const stack = new ItemStack(id, 1);
+    stack.lockMode = ItemLockMode.slot;
+    stack.keepOnDeath = true;
+    stack.nameTag = `${player.name}'s ${material} ${piece}`;
+    equippable.setEquipment(slot, stack);
   }
 }
 

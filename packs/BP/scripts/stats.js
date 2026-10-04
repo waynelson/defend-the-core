@@ -5,7 +5,8 @@
 //
 // Benefits: ranged and melee add damage to hits on attackers and guards;
 // health adds max health (health boost); regeneration heals everyone over
-// time; armour sets the tier of the spawn armour (loadout.js).
+// time; armour sets the tier of the free armour locked to each player
+// (loadout.js).
 
 import { EnchantmentType, EntityDamageCause, EquipmentSlot, ItemStack, system, world } from "@minecraft/server";
 import { ActionFormData } from "@minecraft/server-ui";
@@ -22,21 +23,8 @@ const REGEN_PER_SECOND = [0.25, 0.4, 0.6, 0.85, 1.2]; // by regeneration level
 const ARMOR_NAMES = ["Leather", "Chainmail", "Iron", "Diamond", "Netherite"];
 
 const POTION = { healing: 21, strong_healing: 22, regeneration: 28, long_regeneration: 29, strong_regeneration: 30 };
-const PROT = (n) => ({ protection: n, unbreaking: Math.min(3, n) });
 
-// [label, min level, price, item id, count, enchants | {potion}]
-const ARMOR_ITEMS = [];
-["leather", "chainmail", "iron", "diamond", "netherite"].forEach((material, i) => {
-  const price = [10, 30, 60, 150, 300][i];
-  const ench = i >= 3 ? PROT(i === 4 ? 4 : 2) : undefined;
-  const name = ARMOR_NAMES[i];
-  /** @type {[string, number][]} */
-  const pieces = [["helmet", 1], ["chestplate", 1.4], ["leggings", 1.25], ["boots", 1]];
-  for (const [piece, mult] of pieces) {
-    ARMOR_ITEMS.push([`${name} ${piece[0].toUpperCase()}${piece.slice(1)}${ench ? ` (Prot ${ench.protection})` : ""}`, i + 1, Math.round(price * mult), `minecraft:${material}_${piece}`, 1, ench]);
-  }
-});
-
+// Items: [label, min level, price, item id, count, enchants | {potion}]
 export const CATEGORIES = {
   ranged: {
     label: "Ranged", vendor: "Bowyer",
@@ -104,8 +92,8 @@ export const CATEGORIES = {
   },
   armor: {
     label: "Armor", vendor: "Armorer",
-    benefit: (l) => `respawn in ${ARMOR_NAMES[l - 1].toLowerCase()} armour`,
-    items: ARMOR_ITEMS,
+    benefit: (l) => `wear ${ARMOR_NAMES[l - 1].toLowerCase()} armour (free, locked to you)`,
+    items: [], // armour is never sold: it comes with the level
   },
 };
 export const CATEGORY_IDS = Object.keys(CATEGORIES);

@@ -93,7 +93,7 @@ const VENDORS = {
   quartermaster: "§6§lQuartermaster§r\n§7turrets, mines & supplies",
   mason: "§6§lMason§r\n§7free dirt & cobble, blocks for coins",
   ...Object.fromEntries(
-    Object.entries(CATEGORIES).map(([id, c]) => [id, `§b§l${c.vendor}§r\n§7${c.label}: train & buy`])
+    Object.entries(CATEGORIES).map(([id, c]) => [id, `§b§l${c.vendor}§r\n§7${c.label}: ${c.items.length ? "train & buy" : "train"}`])
   ),
 };
 

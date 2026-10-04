@@ -15,29 +15,9 @@ const POTION = {
   strength: 31,
 };
 
-/** @returns {[string, number, Record<string, number>][]} */
-const IRON_SET = (n, enchants = { protection: 1 }) => [
-  ["minecraft:iron_helmet", n, enchants],
-  ["minecraft:iron_chestplate", n, enchants],
-  ["minecraft:iron_leggings", n, enchants],
-  ["minecraft:iron_boots", n, enchants],
-];
-
 /** @type {{id: string, label: string, items: [string, number, Record<string, number>?][]}[]} */
 export const KITS = [
-  // ---- armour: 9 sets
-  {
-    id: "armor_1",
-    label: "Armor I",
-    items: [
-      ["minecraft:diamond_helmet", 1, { protection: 2 }],
-      ["minecraft:diamond_chestplate", 1, { protection: 2 }],
-      ["minecraft:diamond_leggings", 1, { protection: 2 }],
-      ["minecraft:diamond_boots", 1, { protection: 2, feather_falling: 2 }],
-      ...IRON_SET(4, { protection: 2 }),
-    ],
-  },
-  { id: "armor_2", label: "Armor II", items: IRON_SET(4) },
+  // (no armour: everyone's comes free with their Armor level)
 
   // ---- weapons and ammo: 16 sets
   {
@@ -193,7 +173,7 @@ export const KITS = [
 
 /** The depot's eleven columns, in CHEST_SPOTS order: [bottom kit, top kit?]. */
 export const COLUMNS = [
-  ["armor_1", "armor_2"],
+  ["cobblestone", "dirt"],
   ["melee", "shields"],
   ["ranged", "ammo"],
   ["cobblestone", "dirt"],
