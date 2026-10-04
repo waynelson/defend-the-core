@@ -5,7 +5,8 @@ import { EnchantmentType, ItemStack, system, world } from "@minecraft/server";
 import { ActionFormData } from "@minecraft/server-ui";
 import { coreEntity, labelCore } from "./core.js";
 import { addCoins, coinsOf, econ } from "./economy.js";
-import { progressOf, spendSkillPoints } from "./progression.js";
+import { armorLevelOf, armorTier, hasUnlock, unlock, upgradeArmor } from "./loadout.js";
+import { progressOf } from "./progression.js";
 import { emit, overworld } from "./util.js";
 
 /** Default prices; the DM can override them (economy prices). */
@@ -90,24 +91,27 @@ export function openShop(player, retried = false) {
 // ---------------------------------------------------------------- arms dealer
 
 const PROT4 = { protection: 4, unbreaking: 3 };
-/** High-end gear for skill points, each from a minimum level. */
+/** High-end gear: unlocked once with skill points (`sp`, shared by a set's
+ * pieces through `unlock`), then bought with coins (`price`). */
 export const ELITE = [
-  { id: "diamond_helmet", label: "Diamond Helmet (Prot IV)", sp: 1, level: 2, give: "minecraft:diamond_helmet", enchants: PROT4 },
-  { id: "diamond_chestplate", label: "Diamond Chestplate (Prot IV)", sp: 1, level: 2, give: "minecraft:diamond_chestplate", enchants: PROT4 },
-  { id: "diamond_leggings", label: "Diamond Leggings (Prot IV)", sp: 1, level: 2, give: "minecraft:diamond_leggings", enchants: PROT4 },
-  { id: "diamond_boots", label: "Diamond Boots (Prot IV)", sp: 1, level: 2, give: "minecraft:diamond_boots", enchants: { ...PROT4, feather_falling: 4 } },
-  { id: "netherite_sword", label: "Netherite Sword (Sharpness V)", sp: 2, level: 3, give: "minecraft:netherite_sword", enchants: { sharpness: 5, unbreaking: 3, looting: 3 } },
-  { id: "power_bow", label: "Bow (Power V, Infinity, Flame)", sp: 2, level: 3, give: "minecraft:bow", enchants: { power: 5, infinity: 1, flame: 1, unbreaking: 3 }, extra: ["minecraft:arrow", 1] },
-  { id: "multishot_crossbow", label: "Crossbow (Multishot, Quick Charge III)", sp: 1, level: 3, give: "minecraft:crossbow", enchants: { multishot: 1, quick_charge: 3, unbreaking: 3 } },
-  { id: "totem", label: "Totem of Undying", sp: 1, level: 4, give: "minecraft:totem_of_undying" },
-  { id: "god_apple", label: "Enchanted Golden Apple", sp: 1, level: 4, give: "minecraft:enchanted_golden_apple" },
-  { id: "trident", label: "Trident (Loyalty III, Impaling V)", sp: 2, level: 4, give: "minecraft:trident", enchants: { loyalty: 3, impaling: 5, unbreaking: 3 } },
-  { id: "netherite_helmet", label: "Netherite Helmet (Prot IV)", sp: 2, level: 5, give: "minecraft:netherite_helmet", enchants: PROT4 },
-  { id: "netherite_chestplate", label: "Netherite Chestplate (Prot IV)", sp: 2, level: 5, give: "minecraft:netherite_chestplate", enchants: PROT4 },
-  { id: "netherite_leggings", label: "Netherite Leggings (Prot IV)", sp: 2, level: 5, give: "minecraft:netherite_leggings", enchants: PROT4 },
-  { id: "netherite_boots", label: "Netherite Boots (Prot IV)", sp: 2, level: 5, give: "minecraft:netherite_boots", enchants: { ...PROT4, feather_falling: 4 } },
-  { id: "mace", label: "Mace (Density V)", sp: 3, level: 6, give: "minecraft:mace", enchants: { density: 5, unbreaking: 3 } },
+  { id: "diamond_helmet", unlock: "diamond_armor", label: "Diamond Helmet (Prot IV)", sp: 2, price: 120, give: "minecraft:diamond_helmet", enchants: PROT4 },
+  { id: "diamond_chestplate", unlock: "diamond_armor", label: "Diamond Chestplate (Prot IV)", sp: 2, price: 160, give: "minecraft:diamond_chestplate", enchants: PROT4 },
+  { id: "diamond_leggings", unlock: "diamond_armor", label: "Diamond Leggings (Prot IV)", sp: 2, price: 140, give: "minecraft:diamond_leggings", enchants: PROT4 },
+  { id: "diamond_boots", unlock: "diamond_armor", label: "Diamond Boots (Prot IV)", sp: 2, price: 120, give: "minecraft:diamond_boots", enchants: { ...PROT4, feather_falling: 4 } },
+  { id: "netherite_sword", label: "Netherite Sword (Sharpness V)", sp: 2, price: 250, give: "minecraft:netherite_sword", enchants: { sharpness: 5, unbreaking: 3, looting: 3 } },
+  { id: "power_bow", label: "Bow (Power V, Infinity, Flame)", sp: 2, price: 200, give: "minecraft:bow", enchants: { power: 5, infinity: 1, flame: 1, unbreaking: 3 }, extra: ["minecraft:arrow", 1] },
+  { id: "multishot_crossbow", label: "Crossbow (Multishot, Quick Charge III)", sp: 1, price: 150, give: "minecraft:crossbow", enchants: { multishot: 1, quick_charge: 3, unbreaking: 3 } },
+  { id: "trident", label: "Trident (Loyalty III, Impaling V)", sp: 2, price: 250, give: "minecraft:trident", enchants: { loyalty: 3, impaling: 5, unbreaking: 3 } },
+  { id: "totem", label: "Totem of Undying", sp: 2, price: 300, give: "minecraft:totem_of_undying" },
+  { id: "god_apple", label: "Enchanted Golden Apple", sp: 2, price: 250, give: "minecraft:enchanted_golden_apple" },
+  { id: "netherite_helmet", unlock: "netherite_armor", label: "Netherite Helmet (Prot IV)", sp: 3, price: 300, give: "minecraft:netherite_helmet", enchants: PROT4 },
+  { id: "netherite_chestplate", unlock: "netherite_armor", label: "Netherite Chestplate (Prot IV)", sp: 3, price: 400, give: "minecraft:netherite_chestplate", enchants: PROT4 },
+  { id: "netherite_leggings", unlock: "netherite_armor", label: "Netherite Leggings (Prot IV)", sp: 3, price: 350, give: "minecraft:netherite_leggings", enchants: PROT4 },
+  { id: "netherite_boots", unlock: "netherite_armor", label: "Netherite Boots (Prot IV)", sp: 3, price: 300, give: "minecraft:netherite_boots", enchants: { ...PROT4, feather_falling: 4 } },
+  { id: "mace", label: "Mace (Density V)", sp: 3, price: 400, give: "minecraft:mace", enchants: { density: 5, unbreaking: 3 } },
 ];
+const UNLOCK_NAMES = { diamond_armor: "Diamond armour (all four pieces)", netherite_armor: "Netherite armour (all four pieces)" };
+const unlockId = (entry) => entry.unlock ?? entry.id;
 
 function enchanted(typeId, enchants = {}) {
   const item = new ItemStack(typeId, 1);
@@ -127,20 +131,27 @@ function giveStack(player, stack) {
   if (left) player.dimension.spawnItem(left, player.location);
 }
 
-function buyElite(player, entry) {
-  const prog = progressOf(player);
-  if (prog.level < entry.level) {
-    player.sendMessage(`§c${entry.label} needs level ${entry.level}; you are level ${prog.level}.`);
+function pickElite(player, entry) {
+  const id = unlockId(entry);
+  if (!hasUnlock(player, id)) {
+    if (!unlock(player, id, entry.sp)) {
+      player.sendMessage(`§cUnlocking ${UNLOCK_NAMES[id] ?? entry.label} takes ${entry.sp} skill points.`);
+      return;
+    }
+    player.sendMessage(`§bUnlocked ${UNLOCK_NAMES[id] ?? entry.label}!§r Buy it here with coins any time.`);
     return;
   }
-  if (!spendSkillPoints(player, entry.sp)) {
-    player.sendMessage(`§cYou need ${entry.sp} skill point${entry.sp === 1 ? "" : "s"} for ${entry.label}.`);
+  const price = econ().prices[entry.id] ?? entry.price;
+  const coins = coinsOf(player);
+  if (coins < price) {
+    player.sendMessage(`§cYou need ${price - coins} more coins for ${entry.label}.`);
     return;
   }
   giveStack(player, enchanted(entry.give, entry.enchants));
   if (entry.extra) giveStack(player, new ItemStack(entry.extra[0], entry.extra[1]));
-  emit("elite_purchase", { name: player.name, item: entry.id, sp: entry.sp });
-  player.sendMessage(`§aGot ${entry.label}§r for ${entry.sp} skill point${entry.sp === 1 ? "" : "s"}.`);
+  const balance = addCoins(player, -price, `bought ${entry.id}`);
+  emit("elite_purchase", { name: player.name, item: entry.id, price, balance });
+  player.sendMessage(`§aBought ${entry.label}§r for ${price} coins. §6${balance} coins§r left.`);
 }
 
 export function openElite(player, retried = false) {
@@ -149,13 +160,27 @@ export function openElite(player, retried = false) {
     return;
   }
   const prog = progressOf(player);
+  const coins = coinsOf(player);
+  const level = armorLevelOf(player);
+  const next = armorTier(level + 1);
   const form = new ActionFormData()
     .title("§lArms Dealer")
-    .body(`Level §6${prog.level}§r (${prog.xp}/${prog.next} XP) · §b${prog.sp} skill points§r\nLevel up by surviving rounds and killing attackers.`);
+    .body(
+      `Level §6${prog.level}§r (${prog.xp}/${prog.next} XP) · §b${prog.sp} skill points§r · §6${coins} coins§r\n` +
+        "Spend skill points to unlock gear, then buy it with coins."
+    );
+  form.button(
+    next
+      ? `Armour level ${level} → ${level + 1}: ${next.name}\n${prog.sp >= next.cost ? "§2" : "§4"}${next.cost} skill points`
+      : `Armour level ${level}: ${armorTier(level).name}\n§8maxed out`
+  );
+  const config = econ();
   for (const entry of ELITE) {
-    const ready = prog.level >= entry.level && prog.sp >= entry.sp;
-    const lock = prog.level < entry.level ? `§8level ${entry.level}` : `${ready ? "§2" : "§4"}${entry.sp} SP`;
-    form.button(`${entry.label}\n${lock}`);
+    const price = config.prices[entry.id] ?? entry.price;
+    const status = hasUnlock(player, unlockId(entry))
+      ? `${coins >= price ? "§2" : "§4"}${price} coins`
+      : `${prog.sp >= entry.sp ? "§3" : "§8"}unlock: ${entry.sp} skill points`;
+    form.button(`${entry.label}\n${status}`);
   }
   form.show(player).then((response) => {
     if (response.canceled && String(response.cancelationReason) === "UserBusy" && !retried) {
@@ -163,7 +188,8 @@ export function openElite(player, retried = false) {
       return;
     }
     if (response.canceled || response.selection === undefined) return;
-    buyElite(player, ELITE[response.selection]);
+    if (response.selection === 0) player.sendMessage(upgradeArmor(player).message);
+    else pickElite(player, ELITE[response.selection - 1]);
     system.runTimeout(() => openElite(player), 2);
   });
 }
@@ -172,7 +198,7 @@ export function openElite(player, retried = false) {
 
 const VENDORS = {
   quartermaster: "§6§lQuartermaster§r\n§7coins: turrets & supplies",
-  elite: "§b§lArms Dealer§r\n§7skill points: elite gear",
+  elite: "§b§lArms Dealer§r\n§7unlock with skill points, buy with coins",
 };
 
 /** Puts a vendor at `location` (one of each kind per world). */

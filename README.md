@@ -63,17 +63,27 @@ players, and attackers within 8 blocks fight them. Mines arm 3 seconds after
 placing. Prices, payouts, limits and the shop's open/closed state are
 DM settings (`dm:economy`).
 
-### Levels and the Arms Dealer
+### Levels, the starting kit and the Arms Dealer
 
 Players earn XP for kills (bounty × 10, credited like bounties) and for every
 round survived (`round_xp_base + round_xp_step × wave`). XP is turned into
 levels at the end of each round (100 XP for level 2, then 50 more per
-level), each level brings a skill point, and name tags show the level.
-The **Arms Dealer**, beside the Quartermaster, sells high-end gear for skill
-points, each from a minimum level: Prot IV diamond armour (level 2),
-a Sharpness V netherite sword, a Power V/Infinity/Flame bow and a Multishot
-crossbow (3), totems, god apples and a Loyalty trident (4), Prot IV
-netherite armour (5) and a Density V mace (6).
+level); each level brings a skill point, and name tags show the level.
+
+Every player spawns with a **starting kit**: a full set of armour at their
+**armour level**, a sword, a bow and 32 arrows. On each respawn the kit is
+topped up (empty armour slots, no sword or bow, fewer arrows); better armour
+a player bought stays on.
+
+The **Arms Dealer**, beside the Quartermaster, is where skill points go:
+
+- **Armour level**: leather → chainmail (1 SP) → iron (2) → diamond (3) →
+  netherite (4). The new tier is worn at once and from then on at spawn.
+- **Unlocks**: skill points unlock high-end gear for good (Prot IV diamond
+  or netherite armour as a set, a Sharpness V netherite sword, a Power V
+  bow, a Multishot crossbow, a Loyalty trident, totems, god apples, a
+  Density V mace); unlocked gear is then **bought with coins** as often as a
+  player can afford it.
 
 ### Auto DM
 

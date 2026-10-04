@@ -15,6 +15,7 @@ import { econ, grantCoins, payBounty, setEconomy, startEconomy } from "./economy
 import { playerList, startPlayers } from "./players.js";
 import { grantProgress, killXp, progressionConfig, roundEnd, setProgression, startProgression } from "./progression.js";
 import { autoStatus, setAuto, startAuto } from "./auto.js";
+import { startLoadout } from "./loadout.js";
 import { startRain } from "./rewards.js";
 import { SHOP, priceOf, startShop } from "./shop.js";
 import { MOBS, MODULES, TARGETING } from "./roster.js";
@@ -348,6 +349,7 @@ world.afterEvents.worldLoad.subscribe(() => {
   startShop();
   startDefenses();
   startProgression();
+  startLoadout();
   // Every cleared wave is a round survived, whoever launched it.
   hooks.waveCleared.push((waveNo) => roundEnd(waveNo));
   startAuto();

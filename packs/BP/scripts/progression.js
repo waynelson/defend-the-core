@@ -5,6 +5,7 @@
 
 import { world } from "@minecraft/server";
 import { BOUNTY } from "./economy.js";
+import { setArmorLevel } from "./loadout.js";
 import { emit, store, stored } from "./util.js";
 
 const PROG_PROP = "dtc:progression";
@@ -120,7 +121,7 @@ export function roundEnd(waveNo) {
   }
 }
 
-/** DM: {player|all, xp?, sp?, level?} */
+/** DM: {player|all, xp?, sp?, level?, armor_level?} */
 export function grantProgress(msg) {
   const players = msg.all ? world.getAllPlayers() : world.getAllPlayers().filter((p) => p.name === msg.player);
   if (!players.length) throw new Error(msg.all ? "nobody is online" : `${msg.player} is not online`);
@@ -128,6 +129,7 @@ export function grantProgress(msg) {
     if (typeof msg.level === "number") setScore(player, "level", Math.max(1, msg.level));
     if (typeof msg.sp === "number") setScore(player, "sp", score(player, "sp") + msg.sp);
     if (typeof msg.xp === "number") addXp(player, msg.xp, "dm");
+    if (typeof msg.armor_level === "number") setArmorLevel(player, msg.armor_level);
     settle(player);
     nameTag(player);
   }
