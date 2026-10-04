@@ -1,6 +1,7 @@
 // Coins: a `coins` scoreboard (kept per player by the game, shown in the
-// sidebar). Everyone online earns a share when a wave is cleared; whoever
-// lands a killing blow (or owns the turret or mine that did) earns a bounty.
+// sidebar). Everyone online earns a share when a wave is cleared. Every kill
+// pays a bounty: the full bounty to whoever lands the killing blow (or owns
+// the turret or mine that did), and bounty_share of it to everyone else.
 
 import { DisplaySlotId, world } from "@minecraft/server";
 import { emit, store, stored } from "./util.js";
@@ -11,6 +12,7 @@ const DEFAULTS = {
   wave_base: 50, // per player per cleared wave...
   wave_step: 10, // ...plus this times the wave number
   bounty_mult: 1, // scales BOUNTY
+  bounty_share: 0.5, // everyone else online gets this much of each bounty
   shop_open: true,
   turret_limit: 3, // turrets per player
   mine_limit: 10, // mines per player
@@ -26,7 +28,7 @@ export const BOUNTY = {
 };
 const RANGES = {
   wave_base: [0, 10000], wave_step: [0, 1000], bounty_mult: [0, 20], turret_limit: [0, 20], mine_limit: [0, 100],
-  start_coins: [0, 100000], block_price: [0, 100], repair_rate: [0, 20],
+  start_coins: [0, 100000], block_price: [0, 100], bounty_share: [0, 1], repair_rate: [0, 20],
 };
 
 export function econ() {
@@ -69,13 +71,14 @@ export function setCoins(player, amount) {
   objective().setScore(player, Math.max(0, Math.round(amount)));
 }
 
-/** Adds (or with a negative delta, takes) coins; never below zero. */
-export function addCoins(player, delta, reason) {
+/** Adds (or with a negative delta, takes) coins; never below zero.
+ * `quiet` skips the DM feed line (team bounty shares would flood it). */
+export function addCoins(player, delta, reason, quiet = false) {
   const before = coinsOf(player);
   const change = Math.max(-before, Math.round(delta));
   objective().addScore(player, change);
   const balance = before + change;
-  emit("coins", { name: player.name, delta: change, reason, balance });
+  if (!quiet) emit("coins", { name: player.name, delta: change, reason, balance });
   return balance;
 }
 
@@ -90,13 +93,26 @@ export function payWave(waveNo) {
   emit("wave_payout", { wave_no: waveNo, each: amount, players: players.length });
 }
 
-/** Bounty for an attacker's death, to the player who earned it (if online). */
+const shareOwed = new Map(); // player name -> fractional coins from shares
+
+/** Bounty for a death: the full bounty to whoever earned it (if online),
+ * a share to everyone else online (fractions carry over to later kills). */
 export function payBounty(mobType, playerName) {
   const base = BOUNTY[mobType];
-  if (!base || !playerName) return;
-  const player = world.getAllPlayers().find((p) => p.name === playerName);
-  const amount = Math.round(base * econ().bounty_mult);
-  if (player && amount > 0) addCoins(player, amount, `bounty ${mobType.replace("dm:", "")}`);
+  if (!base) return;
+  const config = econ();
+  const full = base * config.bounty_mult;
+  const mob = mobType.replace("dm:", "");
+  for (const player of world.getAllPlayers()) {
+    if (player.name === playerName) {
+      if (full > 0) addCoins(player, full, `bounty ${mob}`);
+      continue;
+    }
+    const owed = (shareOwed.get(player.name) ?? 0) + full * config.bounty_share;
+    const whole = Math.floor(owed);
+    shareOwed.set(player.name, owed - whole);
+    if (whole > 0) addCoins(player, whole, `team bounty ${mob}`, true);
+  }
 }
 
 /** DM grants: {player?: name, delta} or {all: true, delta}. */
