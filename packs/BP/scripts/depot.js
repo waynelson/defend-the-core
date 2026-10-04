@@ -25,6 +25,8 @@ const ROTATIONS = {
 };
 const DIR_VECTORS = { south: [0, 1], west: [-1, 0], north: [0, -1], east: [1, 0] };
 const SIGN_ROTATION = { south: 0, west: 4, north: 8, east: 12 };
+// facing_direction of buttons and wall signs, by world direction.
+const FACING = { north: 2, south: 3, west: 4, east: 5 };
 
 function dirName([x, z]) {
   return Object.keys(DIR_VECTORS).find((k) => DIR_VECTORS[k][0] === x && DIR_VECTORS[k][1] === z);
@@ -89,6 +91,27 @@ export class Builder {
     this.dim.fillBlocks(new BlockVolume(this.at(x1, y1, z1), this.at(x2, y2, z2)), perm, {
       blockFilter: { includeTypes: types },
     });
+  }
+
+  /** A stone button on a wall, facing the local direction `face`. */
+  button(dx, dy, dz, face, ids = ["minecraft:stone_button"]) {
+    return this.set(dx, dy, dz, ids, { facing_direction: FACING[this.dir(face)], button_pressed_bit: false });
+  }
+
+  /** A lever on a wall, facing the local direction `face`. */
+  lever(dx, dy, dz, face, on = false) {
+    return this.set(dx, dy, dz, "minecraft:lever", { lever_direction: this.dir(face), open_bit: on });
+  }
+
+  /** A wall sign facing the local direction `face`. */
+  wallSign(dx, dy, dz, text, face) {
+    const perm = this.set(dx, dy, dz, ["minecraft:spruce_wall_sign", "minecraft:wall_sign"], {
+      facing_direction: FACING[this.dir(face)],
+    });
+    if (!perm) return;
+    const sign = this.dim.getBlock(this.at(dx, dy, dz))?.getComponent("minecraft:sign");
+    sign?.setText(text, SignSide.Front);
+    sign?.setWaxed(true);
   }
 
   /** A standing sign whose front faces the local direction `face`. */

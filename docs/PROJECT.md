@@ -216,6 +216,8 @@ invisible, but suspect).
 | `depot.js` | Free supply depot pavilion, barrels (`kits.js`), path to the core, `Builder` (rotated local frame) |
 | `market.js` | The mall (replaced Market Street): two storeys, 12 ground-floor shop units, 12 empty upper rooms, atrium leaderboards; waterproofs its site; vendor and label placement; built with a temporary ticking area |
 | `boards.js` | Per-game leaderboards (kills, coins earned) shown on `dm:label` floating text |
+| `controls.js` | The mall's player self-admin buttons and levers (auto DM on/off, difficulty presets, pause, next wave, supply drop, fix mall, restock, vendors, tower, daytime, two-press reset map → panel `request`) |
+| `sectors.js` | Wall-breakers: sector waypoints just outside the defences, breaker assignment and release |
 | `tower.js` | Procedural dungeon towers with guards and loot near the spawn (avoids Market Street) |
 | `rewards.js` | Supply-drop item rain, `lootStack` (tower and drop loot pool) |
 | `players.js` | Player snapshots for the DM tab |
@@ -324,7 +326,14 @@ mobs alive), World, Setup (world setup, depot, Market Street).
   (stairs at the back) has 12 empty rooms for server controls / player
   settings later. Atrium leaderboards: **Top Killers** (final blows this
   game) and **Top Earners** (coins earned this game, never balances).
-  `dm:market` builds or converts (clears Market Street first). Vendors:
+  `dm:market` builds or converts (clears Market Street first). The upper
+  floor's back rooms are **control rooms** (buttons/levers, wall signs):
+  Auto DM (start/stop, pause, next wave, supply drop, Easy/Normal/Hard/
+  Brutal levers) and World (fix mall, restock, vendors, tower, daytime,
+  reset map: twice within 10 s → the panel's request listener runs the New
+  world job). Config `player_controls` turns them off. The mall is
+  protected: no player breaking (except creative), explosions and
+  breaching spare it; vendors and labels take no damage. Vendors:
   Engineer
   (Engineering; turrets, mines, traps & redstone, core repair), Mason (free
   dirt/cobble; blocks by the stack at `block_price` × breach HP), Provisioner

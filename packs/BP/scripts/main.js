@@ -18,10 +18,11 @@ import { autoStatus, setAuto, startAuto } from "./auto.js";
 import { refreshArmor, startLoadout } from "./loadout.js";
 import { newGameForAll, startStats } from "./stats.js";
 import { blockPrices } from "./mason.js";
-import { buildMarket } from "./market.js";
+import { buildMarket, protectMall } from "./market.js";
 import { setPerf, stress } from "./perf.js";
 import { boardsStatus, recordKill, startBoards } from "./boards.js";
 import { refreshSectors, sectorStatus, startSectors } from "./sectors.js";
+import { startControls } from "./controls.js";
 import { raiseTower, removeTower, startTowers, towerStatus } from "./tower.js";
 import { startRain } from "./rewards.js";
 import { SHOP, priceOf, startShop } from "./shop.js";
@@ -458,6 +459,8 @@ world.afterEvents.worldLoad.subscribe(() => {
   startTowers();
   startBoards();
   startSectors();
+  startControls();
+  protectMall();
   // Every cleared wave is a round survived, whoever launched it.
   hooks.waveCleared.push((waveNo) => roundEnd(waveNo));
   // Locked armour is mended (or replaced, if it broke) after every wave.

@@ -67,9 +67,14 @@ export const BLOCKS = {
   ],
 };
 
-/** Coins for a stack: block_price coins per second of breach HP. */
+// Blocks priced above their breach HP (obsidian also shrugs off every
+// explosion, so it's worth more than its HP alone).
+const PRICE_MULT = { "minecraft:obsidian": 2 };
+
+/** Coins for a stack: block_price coins per second of breach HP (times any
+ * PRICE_MULT). */
 export function blockPrice(typeId, config = econ()) {
-  return Math.max(1, Math.round(hardnessSeconds(typeId) * config.block_price));
+  return Math.max(1, Math.round(hardnessSeconds(typeId) * config.block_price * (PRICE_MULT[typeId] ?? 1)));
 }
 
 /** For the DM tab: every block with its HP and price. */

@@ -7,6 +7,7 @@
 
 import { system, world } from "@minecraft/server";
 import { coreCenter, coreLocation, isCoreBlock } from "./core.js";
+import { inMall } from "./market.js";
 import { MOBS } from "./roster.js";
 import { attackers, mobModules } from "./spawner.js";
 import { blockKey, emit, overworld, pos, store, stored } from "./util.js";
@@ -19,6 +20,7 @@ const DEFAULT_CONFIG = {
   max_attackers: 150, // attackers tracked for stuck detection and climbing
   climb_height: 2, // ground attackers hop obstacles up to this many blocks (0: off)
   breaker_share: 0.4, // share of melee ground attackers sent to a sector (sectors.js)
+  player_controls: true, // the mall's self-admin buttons and levers work (controls.js)
   max_alive: 150, // wave spawns wait while this many attackers are alive
   hardness: {}, // block id -> seconds, overrides the table below
 };
@@ -84,6 +86,7 @@ export function setConfig(changes) {
   if (changes.damage_mult !== undefined) config.damage_mult = clamp("damage_mult", changes.damage_mult, 0.1, 50);
   if (changes.decay_rate !== undefined) config.decay_rate = clamp("decay_rate", changes.decay_rate, 0, 10);
   if (changes.max_attackers !== undefined) config.max_attackers = clamp("max_attackers", changes.max_attackers, 1, 200);
+  if (changes.player_controls !== undefined) config.player_controls = Boolean(changes.player_controls);
   if (changes.breaker_share !== undefined) config.breaker_share = clamp("breaker_share", changes.breaker_share, 0, 1);
   if (changes.climb_height !== undefined) config.climb_height = Math.round(clamp("climb_height", changes.climb_height, 0, 4));
   if (changes.max_alive !== undefined) config.max_alive = Math.round(clamp("max_alive", changes.max_alive, 5, 400));
@@ -114,7 +117,7 @@ export function hardnessSeconds(typeId, config = getConfig()) {
 }
 
 export function isProtected(block) {
-  return PROTECTED.has(block.typeId) || isCoreBlock(block);
+  return inMall(block.location) || PROTECTED.has(block.typeId) || isCoreBlock(block);
 }
 
 function isBreachable(block) {

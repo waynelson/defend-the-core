@@ -11,8 +11,9 @@
 // a temporary ticking area covers it while it builds. (Exported names stay
 // "market" for the rest of the add-on: Market Street was its first form.)
 
-import { system, world } from "@minecraft/server";
+import { GameMode, system, world } from "@minecraft/server";
 import { depotBuilder } from "./depot.js";
+import { DIFFICULTIES, registerControls, selectedDifficulty } from "./controls.js";
 import { spawnVendor } from "./shop.js";
 import { emit } from "./util.js";
 
@@ -122,6 +123,43 @@ export function marketBounds(margin = 2) {
     x1: Math.min(...corners.map((c) => c.x)) - margin, x2: Math.max(...corners.map((c) => c.x)) + margin,
     z1: Math.min(...corners.map((c) => c.z)) - margin, z2: Math.max(...corners.map((c) => c.z)) + margin,
   };
+}
+
+// The mall is protected: players (except in creative) can't break its
+// blocks, explosions spare them and attackers don't dig into them. The box
+// (world coordinates, floor to roof) is cached and refreshed every few
+// seconds, since breach code asks for every block it touches.
+let box;
+let boxAt = -Infinity;
+
+function mallBox() {
+  if (system.currentTick - boxAt < 100) return box;
+  boxAt = system.currentTick;
+  const flat = marketBounds(0);
+  if (!flat) return (box = undefined);
+  try {
+    const y = depotBuilder().center.y;
+    box = { ...flat, y1: y - 1, y2: y + ROOF };
+  } catch {
+    box = undefined;
+  }
+  return box;
+}
+
+/** Whether a block position is part of the mall. */
+export function inMall(loc) {
+  const b = mallBox();
+  return Boolean(b) && loc.x >= b.x1 && loc.x <= b.x2 && loc.z >= b.z1 && loc.z <= b.z2 && loc.y >= b.y1 && loc.y <= b.y2;
+}
+
+export function protectMall() {
+  world.beforeEvents.playerBreakBlock.subscribe((event) => {
+    if (!inMall(event.block.location)) return;
+    if (event.player.getGameMode() === GameMode.Creative) return;
+    event.cancel = true;
+    const player = event.player;
+    system.run(() => player.sendMessage("§cThe mall is protected."));
+  });
 }
 
 /** Unit `i`'s span along z: [front wall, back wall] and its door blocks. */
@@ -266,6 +304,54 @@ function* atrium(b) {
   yield;
 }
 
+// ---------------------------------------------------------------- controls
+
+// The two upper rooms at the back (unit 5, by the top of the stairs) are
+// control rooms: west the auto DM, east the world. Buttons and levers sit
+// on the walls at chest height with a wall sign above each.
+const CONTROL_Y = UPPER + 2;
+
+function controlRooms(b) {
+  const u = unitZ(5);
+  const map = {};
+  const register = (lx, y, lz, action) => {
+    const at = b.at(lx, y, lz);
+    map[`${at.x},${at.y},${at.z}`] = action;
+  };
+  const back = (side) => side * (HALF - 1); // x of a control on the back wall
+  const row = [u.inner1, u.inner1 - 1, u.inner2 + 1, u.inner2]; // z along it
+  // A red backing for the reset button.
+  b.fill(9, CONTROL_Y - 1, u.inner2 - 1, 11, CONTROL_Y + 1, u.inner2 - 1, "minecraft:red_concrete");
+
+  const buttons = [
+    // [side, local x, local z, face, action, sign text]
+    [-1, back(-1), row[0], "east", "auto_toggle", "§lAUTO DM\nstart / stop"],
+    [-1, back(-1), row[1], "east", "pause_toggle", "§lPAUSE\nresume"],
+    [-1, back(-1), row[2], "east", "next_wave", "§lNEXT WAVE\nnow"],
+    [-1, back(-1), row[3], "east", "supply_drop", "§lSUPPLY\nDROP"],
+    [1, back(1), row[0], "west", "fix_mall", "§lFIX MALL\n§7rebuilds it"],
+    [1, back(1), row[1], "west", "restock", "§lRESTOCK\nDEPOT"],
+    [1, back(1), row[2], "west", "respawn_vendors", "§lVENDORS\ncall back"],
+    [1, back(1), row[3], "west", "raise_tower", "§lRAISE\nTOWER"],
+    [1, 12, u.inner1, "north", "daytime", "§lDAYTIME\n§7clear skies"],
+    [1, 10, u.inner2, "south", "reset_map", "§4§lRESET MAP\n§r§cpress twice"],
+  ];
+  for (const [, x, z, face, action, text] of buttons) {
+    b.button(x, CONTROL_Y, z, face);
+    b.wallSign(x, CONTROL_Y + 1, z, text, face);
+    register(x, CONTROL_Y, z, action);
+  }
+  // Difficulty levers on the west room's front wall, facing in.
+  const selected = selectedDifficulty();
+  Object.keys(DIFFICULTIES).forEach((level, i) => {
+    const x = -(9 + i);
+    b.lever(x, CONTROL_Y, u.inner1, "north", level === selected);
+    b.wallSign(x, CONTROL_Y + 1, u.inner1, `§lDIFFICULTY\n${DIFFICULTIES[level].label}`, "north");
+    register(x, CONTROL_Y, u.inner1, `difficulty_${level}`);
+  });
+  registerControls(map);
+}
+
 // ---------------------------------------------------------------- labels
 
 const BOARD_Z = -13;
@@ -287,7 +373,9 @@ function placeLabels(b) {
     put(side * (STOREFRONT - 1), 3, unitZ(i).door[0], `shop_${side}_${i}`, `§l${kind ? "§b" : "§7"}${t.name}${t.sub ? `\n§r§7${t.sub}` : ""}`);
   }
   put(0, 4, FRONT + 1, "mall_title", "§l§bDEFEND THE CORE MALL\n§r§7shops on the ground floor");
-  put(0, UPPER + 2, -40, "upper", "§l§7LEVEL 2\n§r§7coming soon");
+  put(0, UPPER + 2, -40, "upper", "§l§bLEVEL 2\n§r§7control rooms at the back");
+  put(-10, UPPER + 4, unitZ(5).door[0], "room_auto", "§l§6AUTO DM CONTROLS");
+  put(10, UPPER + 4, unitZ(5).door[0], "room_world", "§l§cWORLD CONTROLS");
   put(-2, 2, BOARD_Z, "board_kills", "§c§lTOP KILLERS");
   put(2, 2, BOARD_Z, "board_earned", "§e§lTOP EARNERS");
 }
@@ -336,6 +424,7 @@ function placeVendors(b) {
     spawnVendor({ x: at.x + 0.5, y: at.y, z: at.z + 0.5 }, kind);
   }
   placeLabels(b);
+  controlRooms(b);
 }
 
 /** Puts every vendor (and the floating signs and boards) back. */
@@ -370,6 +459,7 @@ export function buildMarket() {
           yield* waterproof(b);
           placeVendors(b);
           world.setDynamicProperty(MARKET_PROP, true);
+          boxAt = -Infinity; // protect the new footprint at once
           emit("market_done", { ok: true, shops: UNITS.length, errors: [...b.errors] });
         } catch (e) {
           emit("market_done", { ok: false, error: String(e), errors: [...b.errors] });
