@@ -17,6 +17,7 @@ import { grantProgress, killXp, progressionConfig, roundEnd, setProgression, sta
 import { autoStatus, setAuto, startAuto } from "./auto.js";
 import { startLoadout } from "./loadout.js";
 import { newGameForAll, startStats } from "./stats.js";
+import { blockPrices } from "./mason.js";
 import { raiseTower, removeTower, startTowers, towerStatus } from "./tower.js";
 import { startRain } from "./rewards.js";
 import { SHOP, priceOf, startShop } from "./shop.js";
@@ -88,13 +89,17 @@ const handlers = {
   economy(msg) {
     const { msg_id: _id, v: _v, ...changes } = msg;
     const config = Object.keys(changes).length ? setEconomy(changes) : econ();
-    return { ...config, shop: SHOP.map((s) => ({ id: s.id, label: s.label, price: priceOf(s, config) })) };
+    return {
+      ...config,
+      shop: SHOP.map((s) => ({ id: s.id, label: s.label, price: priceOf(s, config) })),
+      blocks: blockPrices(config),
+    };
   },
   // Grant or take coins: {player, delta} or {all: true, delta}.
   coins(msg) {
     return grantCoins(msg);
   },
-  // Put the Quartermaster and the Arms Dealer back in the depot.
+  // Put the Quartermaster, the Mason and the skill vendors back in the depot.
   vendor() {
     return respawnVendors();
   },

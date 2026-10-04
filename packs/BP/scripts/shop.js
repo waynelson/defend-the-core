@@ -5,6 +5,7 @@ import { ItemStack, system, world } from "@minecraft/server";
 import { ActionFormData } from "@minecraft/server-ui";
 import { coreEntity, labelCore } from "./core.js";
 import { addCoins, coinsOf, econ } from "./economy.js";
+import { openMason } from "./mason.js";
 import { CATEGORIES, openSkillShop } from "./stats.js";
 import { emit, overworld } from "./util.js";
 
@@ -17,7 +18,6 @@ export const SHOP = [
   { id: "frost_mine", label: "Frost Mine", price: 30, give: ["dm:frost_mine", 1], icon: "textures/blocks/ice" },
   { id: "arrows", label: "Arrows x32", price: 15, give: ["minecraft:arrow", 32], icon: "textures/items/arrow" },
   { id: "golden_apple", label: "Golden Apple", price: 60, give: ["minecraft:golden_apple", 1], icon: "textures/items/apple_golden" },
-  { id: "iron_blocks", label: "Iron Blocks x8", price: 80, give: ["minecraft:iron_block", 8], icon: "textures/blocks/iron_block" },
   { id: "core_repair", label: "Core Repair +25 HP", price: 100, repair: 25, icon: "textures/items/nether_star" },
 ];
 
@@ -91,6 +91,7 @@ export function openShop(player, retried = false) {
 
 const VENDORS = {
   quartermaster: "§6§lQuartermaster§r\n§7turrets, mines & supplies",
+  mason: "§6§lMason§r\n§7free dirt & cobble, blocks for coins",
   ...Object.fromEntries(
     Object.entries(CATEGORIES).map(([id, c]) => [id, `§b§l${c.vendor}§r\n§7${c.label}: train & buy`])
   ),
@@ -112,7 +113,8 @@ export function startShop() {
   world.afterEvents.playerInteractWithEntity.subscribe((event) => {
     if (event.target.typeId !== "dm:vendor") return;
     const kind = event.target.getDynamicProperty("dtc:shop");
-    if (typeof kind === "string" && CATEGORIES[kind]) openSkillShop(event.player, kind);
+    if (kind === "mason") openMason(event.player);
+    else if (typeof kind === "string" && CATEGORIES[kind]) openSkillShop(event.player, kind);
     else openShop(event.player);
   });
 }

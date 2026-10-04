@@ -15,6 +15,7 @@ const DEFAULTS = {
   turret_limit: 3, // turrets per player
   mine_limit: 10, // mines per player
   start_coins: 200, // every player's coins at the start of a game
+  block_price: 4, // Mason: coins per second of block HP, per stack of 64
   prices: {}, // shop item id -> price, overrides shop.js
 };
 export const BOUNTY = {
@@ -24,7 +25,7 @@ export const BOUNTY = {
 };
 const RANGES = {
   wave_base: [0, 10000], wave_step: [0, 1000], bounty_mult: [0, 20], turret_limit: [0, 20], mine_limit: [0, 100],
-  start_coins: [0, 100000],
+  start_coins: [0, 100000], block_price: [0, 100],
 };
 
 export function econ() {

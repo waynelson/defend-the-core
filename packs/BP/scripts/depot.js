@@ -242,6 +242,7 @@ const BARREL_FACING = { down: 0, up: 1, north: 2, south: 3, west: 4, east: 5 };
 /** @type {[string, number, number][]} */
 const VENDOR_SPOTS = [
   ["quartermaster", 0, 0],
+  ["mason", 0, 2],
   ["ranged", -2, -2],
   ["melee", 2, -2],
   ["armor", 0, -2],
