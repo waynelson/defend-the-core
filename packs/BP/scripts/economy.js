@@ -14,6 +14,7 @@ const DEFAULTS = {
   shop_open: true,
   turret_limit: 3, // turrets per player
   mine_limit: 10, // mines per player
+  start_coins: 200, // every player's coins at the start of a game
   prices: {}, // shop item id -> price, overrides shop.js
 };
 export const BOUNTY = {
@@ -23,6 +24,7 @@ export const BOUNTY = {
 };
 const RANGES = {
   wave_base: [0, 10000], wave_step: [0, 1000], bounty_mult: [0, 20], turret_limit: [0, 20], mine_limit: [0, 100],
+  start_coins: [0, 100000],
 };
 
 export function econ() {
@@ -59,6 +61,10 @@ export function coinsOf(player) {
   } catch {
     return 0; // no score yet
   }
+}
+
+export function setCoins(player, amount) {
+  objective().setScore(player, Math.max(0, Math.round(amount)));
 }
 
 /** Adds (or with a negative delta, takes) coins; never below zero. */

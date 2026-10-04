@@ -9,13 +9,14 @@ import { system, world } from "@minecraft/server";
 import { getConfig, setConfig, damagedBlocks, startBreach } from "./breach.js";
 import { clearCore, coreEntity, coreHp, coreLocation, forgetCore, labelCore, placeCore } from "./core.js";
 import { buildDepot, depotSitesLoaded, respawnVendors, restockDepot } from "./depot.js";
-import { control, coreLost, gameStatus, hooks, setPhase, startGame, waveBegin, waveCommit, waveGroup } from "./game.js";
+import { control, coreLost, gameStatus, hooks, resetGame, setPhase, startGame, waveBegin, waveCommit, waveGroup } from "./game.js";
 import { bountyOwner, defenseList, dmMine, dmPlace, startDefenses } from "./defenses.js";
 import { econ, grantCoins, payBounty, setEconomy, startEconomy } from "./economy.js";
 import { playerList, startPlayers } from "./players.js";
 import { grantProgress, killXp, progressionConfig, roundEnd, setProgression, startProgression } from "./progression.js";
 import { autoStatus, setAuto, startAuto } from "./auto.js";
 import { startLoadout } from "./loadout.js";
+import { newGameForAll, startStats } from "./stats.js";
 import { raiseTower, removeTower, startTowers, towerStatus } from "./tower.js";
 import { startRain } from "./rewards.js";
 import { SHOP, priceOf, startShop } from "./shop.js";
@@ -119,6 +120,12 @@ const handlers = {
   // DM grants: {player|all, xp?, sp?, level?}
   progress(msg) {
     return grantProgress(msg);
+  },
+  // A new game: wave count back to zero and every player starts afresh
+  // (starting coins, level 1 skills, a level-1 kit, inventories cleared).
+  new_game() {
+    resetGame();
+    return gameStatus();
   },
   // Towers: {floors?, difficulty?} raises one near the spawn (replacing the
   // last); tower_remove takes it down.
@@ -360,6 +367,8 @@ world.afterEvents.worldLoad.subscribe(() => {
   startDefenses();
   startProgression();
   startLoadout();
+  startStats();
+  hooks.newGame.push(newGameForAll);
   startTowers();
   // Every cleared wave is a round survived, whoever launched it.
   hooks.waveCleared.push((waveNo) => roundEnd(waveNo));

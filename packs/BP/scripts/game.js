@@ -28,7 +28,7 @@ let game = { phase: "setup", wave_no: 0 };
 let wave;
 let lastProgress = "";
 /** Listeners other modules add (the auto DM, progression). */
-export const hooks = { timerDone: [], waveCleared: [], lost: [] };
+export const hooks = { timerDone: [], waveCleared: [], lost: [], newGame: [] };
 
 function fire(list, ...args) {
   for (const fn of list) {
@@ -289,13 +289,20 @@ function endWave(eventType) {
   emit(eventType, { wave_id: wave.id });
 }
 
+/** Which game this is; players' skills belong to one game. */
+export function gameNo() {
+  return game.game_no ?? 1;
+}
+
 /** A new game: no wave, wave count back to zero, setup phase. */
 export function resetGame() {
   endWave("wave_aborted");
   wave = undefined;
   game.wave_no = 0;
+  game.game_no = gameNo() + 1;
   setPhase("setup", undefined, true);
-  emit("game_reset", {});
+  emit("game_reset", { game_no: game.game_no });
+  fire(hooks.newGame);
 }
 
 /** Called when the core dies; the wave's mobs stay where they are. */

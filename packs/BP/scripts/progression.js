@@ -5,7 +5,7 @@
 
 import { world } from "@minecraft/server";
 import { BOUNTY } from "./economy.js";
-import { setArmorLevel } from "./loadout.js";
+import { CATEGORY_IDS, setStat } from "./stats.js";
 import { emit, store, stored } from "./util.js";
 
 const PROG_PROP = "dtc:progression";
@@ -82,6 +82,14 @@ export function addXp(player, amount, reason) {
   emit("xp", { name: player.name, xp: Math.round(amount), reason });
 }
 
+/** A new game: level 1, no XP or skill points. */
+export function resetProgress(player) {
+  setScore(player, "level", 1);
+  setScore(player, "xp", 0);
+  setScore(player, "sp", 0);
+  nameTag(player);
+}
+
 /** XP for an attacker's death, to the player who earned it (if online). */
 export function killXp(mobType, playerName) {
   const base = BOUNTY[mobType];
@@ -121,7 +129,7 @@ export function roundEnd(waveNo) {
   }
 }
 
-/** DM: {player|all, xp?, sp?, level?, armor_level?} */
+/** DM: {player|all, xp?, sp?, level?, skills?: {ranged: 3, ...}} */
 export function grantProgress(msg) {
   const players = msg.all ? world.getAllPlayers() : world.getAllPlayers().filter((p) => p.name === msg.player);
   if (!players.length) throw new Error(msg.all ? "nobody is online" : `${msg.player} is not online`);
@@ -129,7 +137,9 @@ export function grantProgress(msg) {
     if (typeof msg.level === "number") setScore(player, "level", Math.max(1, msg.level));
     if (typeof msg.sp === "number") setScore(player, "sp", score(player, "sp") + msg.sp);
     if (typeof msg.xp === "number") addXp(player, msg.xp, "dm");
-    if (typeof msg.armor_level === "number") setArmorLevel(player, msg.armor_level);
+    for (const [skill, level] of Object.entries(msg.skills ?? {})) {
+      if (CATEGORY_IDS.includes(skill) && typeof level === "number") setStat(player, skill, level);
+    }
     settle(player);
     nameTag(player);
   }

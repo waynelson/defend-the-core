@@ -5,7 +5,7 @@
 import { system, world } from "@minecraft/server";
 import { coreLocation } from "./core.js";
 import { coinsOf } from "./economy.js";
-import { armorLevelOf, armorTier, unlocksOf } from "./loadout.js";
+import { CATEGORY_IDS, statsOf } from "./stats.js";
 import { progressOf } from "./progression.js";
 import { emit, round } from "./util.js";
 
@@ -36,8 +36,7 @@ function describePlayer(player) {
         : undefined,
     coins: coinsOf(player),
     ...progressOf(player), // level, xp, next, sp
-    armor: armorTier(armorLevelOf(player)).name,
-    unlocks: unlocksOf(player),
+    skills: Object.fromEntries(CATEGORY_IDS.map((c) => [c, statsOf(player)[c] ?? 1])),
   };
 }
 

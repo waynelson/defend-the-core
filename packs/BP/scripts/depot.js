@@ -237,13 +237,23 @@ function buildPavilion(b) {
 
 const BARREL_FACING = { down: 0, up: 1, north: 2, south: 3, west: 4, east: 5 };
 
-/** The Quartermaster stands on the depot's chiseled centre, the Arms
- * Dealer two blocks behind him. */
+// Where the vendors stand (local): the Quartermaster in the middle, the
+// five skill vendors around him, clear of the barrel columns.
+/** @type {[string, number, number][]} */
+const VENDOR_SPOTS = [
+  ["quartermaster", 0, 0],
+  ["ranged", -2, -2],
+  ["melee", 2, -2],
+  ["armor", 0, -2],
+  ["health", -2, 1],
+  ["regen", 2, 1],
+];
+
 function placeVendor(b) {
-  const at = b.at(0, 1, 0);
-  spawnVendor({ x: at.x + 0.5, y: at.y, z: at.z + 0.5 }, "quartermaster");
-  const back = b.at(0, 1, -2);
-  spawnVendor({ x: back.x + 0.5, y: back.y, z: back.z + 0.5 }, "elite");
+  for (const [kind, x, z] of VENDOR_SPOTS) {
+    const at = b.at(x, 1, z);
+    spawnVendor({ x: at.x + 0.5, y: at.y, z: at.z + 0.5 }, kind);
+  }
 }
 
 function buildChests(b) {
