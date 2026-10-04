@@ -28,7 +28,7 @@ const DEFAULTS = {
   rewards: true, // supply drop every intermission
   restock_every: 3, // restock the depot every N waves (0 = never)
   tower_every: 2, // raise a new tower every N intermissions (0 = never)
-  wave_timeout_s: 420,
+  wave_timeout_s: 420, // a wave ends this long after its last mob came in
 };
 const RANGES = {
   prep_s: [10, 1800], intermission_s: [10, 1800], waves: [0, 100], start: [1, 10], step: [0, 3],
@@ -92,18 +92,21 @@ function places(d) {
   return spread.map((o) => ({ bearing: (((base + o) % 360) + 360) % 360, dist: 40 }));
 }
 
+// The power budget: gentle early, then steep from difficulty 5 so late
+// waves are hundreds strong (about 60 mobs at 7, 150 at 8.3, 460 at 10);
+// the max-alive cap turns them into a constant stream.
 function generate(d, flyers) {
-  const budget = 8 + d * 7;
+  const budget = 8 + d * 7 + 6 * Math.max(0, d - 5) ** 3;
   const mix = Object.entries(weights(d, flyers)).filter(([mob, w]) => w > 0 && MOBS[mob]);
   const total = mix.reduce((n, [, w]) => n + w, 0);
   const from = places(d);
   const interval = Math.max(0.3, Math.round((1.5 - d * 0.1) * 10) / 10);
   const groups = [];
   for (const [mob, w] of mix) {
-    const count = Math.round((budget * (w / total)) / COST[mob]);
+    const count = Math.min(200, Math.round((budget * (w / total)) / COST[mob]));
     from.forEach((place, i) => {
       const share = Math.floor(count / from.length) + (i < count % from.length ? 1 : 0);
-      if (share) groups.push({ mob, count: Math.min(50, share), interval_s: interval, delay_s: DELAY[mob] ?? 0, ...place });
+      if (share) groups.push({ mob, count: share, interval_s: interval, delay_s: DELAY[mob] ?? 0, ...place });
     });
   }
   if (!groups.length) groups.push({ mob: "dm:zombie", count: 3, ...from[0] });
@@ -209,7 +212,7 @@ function watchdog() {
   const wave = activeWave();
   if (status.phase === "wave") {
     if (!wave) setPhase("intermission", config.intermission_s);
-    else if (wave.age_s > config.wave_timeout_s) finishWave();
+    else if (!wave.queued && wave.idle_s > config.wave_timeout_s) finishWave();
     return;
   }
   if ((status.phase === "prep" || status.phase === "intermission") && status.seconds_left == null) {

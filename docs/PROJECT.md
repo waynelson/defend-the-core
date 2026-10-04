@@ -217,7 +217,11 @@ script, run it, never hand-edit the output.** The main pack uses stable
 - **Auto DM defaults:** prep 180 s, intermission 90 s, 10 waves, difficulty
   2 + 0.7/wave (cap 10), flyers on, supply drop each intermission, depot
   restock every 3 waves, a tower every 2 intermissions, wave timeout 420 s.
-  Biggest default wave ≈ 35 mobs. **Max mobs alive** (`config max_alive`,
+  Wave sizes: ≈ 18–31 mobs for waves 1–6, then 38, 57, 94, 155 (wave 10,
+  difficulty 8.3); difficulty 9 ≈ 244, 10 ≈ 430 (budget `8 + 7d + 6·max(0,
+  d−5)³`, same in the DM tab generator). Limits: 1,000 mobs per wave, 200 per
+  group and per mob type, 40 groups. The auto DM's wave timeout counts from
+  the last spawn, and never fires while spawns are queued. **Max mobs alive** (`config max_alive`,
   default 150): wave spawns past the cap queue and come in (≤ 6 per 5 ticks)
   as others die; `wave_capped` is emitted once per wave. DM `spawn` commands
   ignore the cap.

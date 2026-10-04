@@ -19,8 +19,9 @@ const PHASE_TITLES = {
   won: "§aVictory!",
   lost: "§cThe core has fallen",
 };
-const MAX_GROUPS = 30;
-const MAX_WAVE_MOBS = 200;
+const MAX_GROUPS = 40;
+const MAX_WAVE_MOBS = 1000;
+const MAX_GROUP_MOBS = 200; // also the most of any one mob type in a wave
 
 /** Persisted: {phase, ends_tick?, paused_left?, wave_no} */
 // Loaded in startGame(): world properties are unreadable during early execution.
@@ -125,7 +126,9 @@ export function waveGroup(msg) {
   if (wave.committed) throw new Error(`wave ${wave.id} is already committed`);
   if (wave.groups.length >= MAX_GROUPS) throw new Error(`at most ${MAX_GROUPS} groups`);
   const count = msg.count ?? 1;
-  if (!Number.isInteger(count) || count < 1 || count > 50) throw new Error("count must be 1..50");
+  if (!Number.isInteger(count) || count < 1 || count > MAX_GROUP_MOBS) throw new Error(`count must be 1..${MAX_GROUP_MOBS}`);
+  const sameType = wave.groups.filter((g) => g.spec.mob === msg.mob).reduce((n, g) => n + g.count, 0);
+  if (sameType + count > MAX_GROUP_MOBS) throw new Error(`a wave holds at most ${MAX_GROUP_MOBS} ${msg.mob}`);
   const interval = msg.interval_s ?? 1;
   if (typeof interval !== "number" || interval < 0 || interval > 60) throw new Error("interval_s must be 0..60");
   const delay = msg.delay_s ?? 0;
@@ -220,6 +223,7 @@ function spawnDue() {
     }
     if (mob) {
       wave.spawned++;
+      wave.last_spawn_tick = now;
     } else if (++item.tries < 20) {
       // Chunk not loaded yet: try again in a second.
       item.at = now + 20;
@@ -255,7 +259,15 @@ function completeWave() {
 /** The running wave, for the auto DM: {wave_no, age_s} or undefined. */
 export function activeWave() {
   if (!wave?.committed || wave.done) return undefined;
-  return { wave_no: game.wave_no, age_s: (system.currentTick - wave.committed_tick) / 20 };
+  const now = system.currentTick;
+  return {
+    wave_no: game.wave_no,
+    age_s: (now - wave.committed_tick) / 20,
+    // Seconds since the last mob came in (or since launch): a long wave
+    // that is still spawning from its queue isn't stuck.
+    idle_s: (now - (wave.last_spawn_tick ?? wave.committed_tick)) / 20,
+    queued: wave.pending.length,
+  };
 }
 
 /** Ends a wave that drags on (mobs stuck out of reach) as cleared. */
