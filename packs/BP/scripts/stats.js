@@ -410,9 +410,25 @@ function hudText(player) {
 
 // ---------------------------------------------------------------- events
 
-/** A new game: everyone online starts again; others when they next appear. */
+/** A new game: everyone online starts again (one failing doesn't stop the
+ * rest); others when they next appear. Everyone online is told. */
 export function newGameForAll() {
-  for (const player of world.getAllPlayers()) resetPlayer(player, true);
+  const reset = [];
+  const failed = [];
+  for (const player of world.getAllPlayers()) {
+    try {
+      resetPlayer(player, true);
+      player.onScreenDisplay.setTitle("§6§lNew game!", {
+        subtitle: `§f${econ().start_coins} coins, level 1, a fresh kit`,
+        fadeInDuration: 5, stayDuration: 60, fadeOutDuration: 10,
+      });
+      player.sendMessage(`§6§lA new game has started.§r Your coins, levels, skills and inventory have been reset.`);
+      reset.push(player.name);
+    } catch (e) {
+      failed.push({ name: player.name, error: String(e) });
+    }
+  }
+  emit("players_reset", { reset, failed });
 }
 
 export function startStats() {
