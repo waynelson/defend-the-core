@@ -2,28 +2,29 @@
 
 The handoff document for anyone (human or agent) picking up development. It
 describes what exists, where it lives, how to change and ship it, the rules
-of the road, and what's next. **This file is authoritative; README.md is out
-of date** (it still describes the 0.6 Quartermaster and depot).
+of the road, and what's next. **This file is authoritative**; README.md is a
+short overview that points here.
 
-Last updated: 2026-10-04, add-on v0.7.5 on dev and beta.
+Last updated: 2026-10-04. Add-on **v0.7.5** on dev and beta; Crafty fork
+`local/nelson-next` at 2fbaa7f1.
 
 ---
 
 ## 1. What this is
 
 **Defend the Core** is a Minecraft Bedrock tower-defense game mode run by a
-Dungeon Master (DM). Players defend a core block from waves of mobs that path
-to it and breach whatever is in the way; they earn coins and skill points,
-buy gear and defenses on Market Street, and place turrets and mines. The DM
-runs the game from a **DM tab** in a Crafty Controller panel (or lets the
-**auto DM** run it).
+Dungeon Master (DM). Players defend a core block from waves of mobs (and
+bosses) that path to it and breach whatever is in the way. They earn coins and
+skill points, train six skills, buy gear and blocks on Market Street, sell
+loot to the Pawnbroker, and place turrets and mines. The DM runs the game from
+a **DM tab** in a Crafty Controller panel, or lets the **auto DM** run it.
 
 Two deliverables:
 
 | Part | Where | What |
 | --- | --- | --- |
 | Bedrock add-on | `C:\defend-the-core`, public at github.com/waynelson/defend-the-core | Behavior pack (entities, items, Script API code), resource pack, chat-bridge pack |
-| DM tab | Wayne's Crafty fork, `C:\Crafty` / `C:\Crafty-Dev`, branch `local/nelson-next` | Panel UI, API, protocol validation, world map, remote-node support |
+| DM tab | Wayne's Crafty fork, `C:\Crafty` / `C:\Crafty-Dev`, branch `local/nelson-next` | Panel UI, API, protocol validation, armed waves, world map, remote-node support |
 
 The original design spec ("Defend the Core — Bedrock Add-on & Crafty Plus DM
 Plugin Spec") was uploaded in the first chat session and is **not in either
@@ -32,39 +33,49 @@ the first spike.
 
 ## 2. Working agreement (read first)
 
-- **Owner:** Wayne (waynelson). Plays and tests with family and beta testers.
+- **Owner:** Wayne (waynelson). Tests with family and beta testers
+  (currently Orion84772100, WashORF17, Gunktacular).
 - **Two servers, two roles:**
   - **mc-testing = dev.** Free to wipe, restart, flatten, stress. Deploy here
     as often as you like.
   - **mc-defend = beta.** Real testers play here. **Deploy, restart, reset or
     run world-changing commands on beta only when Wayne asks.** Beta only
-    ever runs a tagged release.
+    ever runs a tagged release. Player-level commands he asks for (e.g. "put
+    X in spectator") are fine.
+- **Restart warnings:** when Wayne asks for a beta push with players online,
+  he names the warning (30 s, 60 s): send `title @a title`/`subtitle` plus a
+  `say` with what's changing, a reminder at 30 s / 10 s, then deploy. Check
+  the game state and player modes afterwards.
 - **Crafty service restarts are Wayne's.** The hub runs as a Windows service
   and restarting it needs admin. When a fork change needs the panel
-  restarted, say so; don't try to restart it.
+  restarted, say so; don't try to restart it. (Armed waves now survive a
+  restart.)
 - **Don't push the Crafty fork** to GitLab without asking (it has never been
   pushed; commits stay local). Pushing the add-on to GitHub after committing
-  has been routine.
+  is routine.
 - **Report honestly what was tested.** Most features can be checked from the
-  console, but anything needing a player (menus, combat feel, locked items)
-  is "untested in-game" until Wayne tries it. Say which is which.
+  console, but anything needing a player (menus, visuals, combat feel, locked
+  items) is "untested in-game" until Wayne or the testers try it.
 - **UI style (DM tab):** solid Bootstrap buttons (outline buttons were
   unreadable), plain small text (not `text-muted`), plain-English labels.
-- Wayne prefers a recommendation over a survey of options, and short
-  plain-language summaries.
+- Wayne prefers a recommendation over a survey of options, short
+  plain-language summaries, and changes he can tune from the DM tab.
+- He often sends follow-up requests mid-task; finish the current piece,
+  then handle them in order.
 
 ## 3. Repos, branches and commit flow
 
 ### Add-on (`C:\defend-the-core`)
 
-- Branch `main`; releases are annotated tags `vX.Y.Z` (v0.1.0 … v0.7.1).
+- Branch `main`; releases are annotated tags `vX.Y.Z` (v0.1.0 … v0.7.5).
 - Push with the GitHub CLI's credentials (the Windows credential store
   fails to persist):
   ```
   git -c credential.helper= -c "credential.helper=!gh auth git-credential" push origin main --follow-tags
   ```
-- `vendor/bedrock-samples` holds vanilla definitions for reference;
-  `types/` and `node_modules/` back the type checker.
+- `vendor/bedrock-samples` holds vanilla definitions for reference (no
+  render controllers); `types/` and `node_modules/` back the type checker.
+- `dist/` holds builds and stress logs (not committed).
 
 ### Crafty fork
 
@@ -85,7 +96,7 @@ the first spike.
   cd C:\Crafty && git switch --detach local/nelson-next
   ```
 - Hub tests: `C:\Crafty\.venv\Scripts\python.exe -m pytest -q`
-  (whole suite ~540 tests, ~1 min; DM only: `tests/classes/dm`).
+  (whole suite ≈ 550 tests, ~1 min; DM only: `tests/classes/dm`, 93 tests).
 - Ignore the untracked `crafty.exe` / `crafty_updater.exe` in `C:\Crafty`.
 
 ## 4. Environments
@@ -100,6 +111,8 @@ the first spike.
 - The hub reaches nodes through `NodeClient` with a certificate-pinned API
   token. The dev tools (`tools/node.py`) read the token from the hub DB
   (`C:\crafty\app\config\db\crafty.sqlite`) and skip certificate checks.
+- Hub logs: `C:\Crafty\logs\` (`audit.log` records every DM action;
+  `commander.log` shows panel restarts).
 - Both servers need `content-log-console-output-enabled=true` and
   `content-log-level=info` in `server.properties` (that's how `[DM]` lines
   reach the console), and the **Beta APIs** experiment (for the chat bridge;
@@ -109,12 +122,15 @@ the first spike.
 
 **Beta world** "Nelson - Defend the CORE World 2", seed 1829058741, 441
 chunks pre-generated: core (-139, 62, 153); depot centre (-182, 69, 128),
-facing east; Market Street entrance (-190, 70, 128), plaza (-246, 70, 128).
-New game #2 started (wave 0, setup) on 2026-10-04.
+facing east; Market Street entrance (-190, 70, 128), plaza (-246, 70, 128),
+Pawnbroker stand in front of the fountain. Game #2 in progress (wave 7,
+prep) as of 2026-10-04.
 
-**Dev world**: core (0, 66, 0) on a flattened 81×81 stone stress arena (y 65,
-x/z −40..40); depot (43, 64, −25) facing west; Market Street runs east
-(x ≈ 51..115). Dev is a mess by design; wipe and re-run `dm:setup` freely.
+**Dev world**: core on a beacon at (0, 65, 0) in the middle of a flattened
+81×81 stone stress arena (y 65, x/z −40..40); depot (43, 64, −25) facing
+west; Market Street runs east (x ≈ 51..115). Dev is a mess by design (stress
+tests and bosses destroy the core regularly; `dm:core_set {"x":0,"y":65,
+"z":0,"setblock":true}` puts it back).
 
 ## 5. Architecture
 
@@ -131,122 +147,157 @@ DM tab (browser) ──HTTPS──> hub API (/api/v2/servers/<id>/dm)
 ```
 
 - `scriptevent` payloads are capped at 2048 chars, **~1000 through Crafty's
-  remote console**. Keep payloads small.
+  remote console**. Keep payloads small; waves go out as `wave_begin`, one
+  `group` per command, `wave_commit`.
 - **Crafty keeps only 70 console lines** (`virtual_terminal_lines`): anything
   reading `[DM]` lines must poll often and de-duplicate (see `tools/dm.py`
-  `Watcher`).
+  `Watcher`). Player snapshots and DM-tab polls fill it fast.
 - The hub's `protocol.py` `ACTIONS` dict mirrors every add-on action with a
-  JSON schema (`additionalProperties: false`). **Adding an action or field
-  to the add-on means adding it to `protocol.py` too**, or the DM tab
-  rejects it. Add a case to `tests/classes/dm/test_protocol.py`.
-- `WORLD_ACTIONS` in `protocol.py` (weather, time, give, say, title,
-  tp_core, tell, heal, kick) are plain vanilla commands built by the hub,
-  not add-on actions.
+  JSON schema (`additionalProperties: false`), and `MOBS`/`MODULES` mirror
+  `roster.js`. **Adding an action, field, mob or module to the add-on means
+  adding it to `protocol.py` too**, or the DM tab rejects it. Add a case to
+  `tests/classes/dm/test_protocol.py`. Config fields the tab should show
+  must also be listed in `session.py`'s config filter.
+- `WORLD_ACTIONS` in `protocol.py` (weather, time, give, say, title, dm,
+  tp_core, tell, heal, kick, gamemode) are plain vanilla commands built by
+  the hub, not add-on actions.
+- **Armed waves** ("launch when the timer ends") live in the hub: saved to
+  `C:\Crafty\app\config\dm_armed.json`, watched by a thread per server that
+  polls the console each second, asks the add-on for `status` every 15 s,
+  and launches on `timer_done`, the add-on's `timer_ended` status flag, or
+  its own countdown reaching 0. Resumed after a panel restart; never dies on
+  an error; retries a failed launch 3×.
 - Protocol version: `PROTOCOL = 1` (in `main.js`, reported in `loaded`).
 
 ### Add-on packs
 
 | Pack | Contents |
 | --- | --- |
-| `packs/BP` | `entities/` (**generated**), `items/` (generated), `scripts/`, `loot_tables/`, `texts/` |
-| `packs/RP` | client entities (generated from `tools/templates/*.entity.json`, 1.8/1.10 vanilla formats), `textures/item_texture.json`, `texts/en_US.lang` (generated) |
+| `packs/BP` | `entities/` (**generated**), `items/` (generated), `scripts/`, `loot_tables/` (gear tables hand-written), `texts/` |
+| `packs/RP` | client entities (generated from `tools/templates/*.entity.json`), `textures/item_texture.json`, `texts/en_US.lang` (generated) |
 | `packs/chat` | `chat.js`: relays player chat to `[DM]` lines; uses `@minecraft/server` 2.11.0-beta, so it needs Beta APIs |
 
-**Entity and item JSON is generated by `tools/gen_entities.py`. Edit that
-script, run it, never hand-edit the output.** The main pack uses stable
-`@minecraft/server` 2.10.0 and `@minecraft/server-ui` 2.2.0.
+**Entity, item and lang JSON is generated by `tools/gen_entities.py`. Edit
+that script (or a template), run it, never hand-edit the output.** The main
+pack uses stable `@minecraft/server` 2.10.0 and `@minecraft/server-ui` 2.2.0.
+
+Client templates must be vanilla's **1.8.0 format** (the `*.v1.0.entity.json`
+files in bedrock-samples); newer formats render custom entities invisible.
+All templates are 1.8.0 except `phantom.entity.json` (1.10.0, not reported
+invisible, but suspect).
 
 ### Script modules (`packs/BP/scripts`)
 
 | Module | Role |
 | --- | --- |
-| `main.js` | Action router (`handlers`), `entityDie` bounty/XP, world-load startup, `GAMERULES` |
+| `main.js` | Action router (`handlers`), `entityDie` bounty/XP and boss defeat, startup (custom item components in `system.beforeEvents.startup`, everything else in `worldLoad`), `GAMERULES` |
 | `util.js` | `emit` (prints `[DM]` lines), `store`/`stored` (JSON world properties), `overworld`, helpers |
 | `core.js` | The core entity on a beacon: place, clear, HP, label |
-| `game.js` | Phases (setup, prep, wave, intermission, won, lost), waves (begin/group/commit), HUD, `hooks` (timerDone, waveCleared, lost, newGame), `resetGame`, `gameNo` |
-| `spawner.js` / `roster.js` | Spawning, spawn points, `MOBS` roster and default targeting |
-| `breach.js` | Block damage map (all attacker block damage × `damage_mult`, default 8), stuck detection (first `max_attackers`=60 mobs, bosses first), modules: dig, detonate_stuck, siege_arrow, artillery, summon |
-| `auto.js` | Auto DM: prep → generated wave → intermission (supply drop, restock, tower) → … ; watchdog and wave timeout |
-| `economy.js` | `coins` scoreboard, settings, wave pay, `BOUNTY`, `payBounty` (full to the final blow, `bounty_share` to everyone else) |
-| `progression.js` | XP, levels (instant level-ups), skill points (`dm_xp`, `dm_level`, `dm_sp`), round-end XP |
-| `stats.js` | Six skills, per-game reset, benefits (damage bonus, health boost, regen), skill vendors, Armorer |
+| `game.js` | Phases, waves (begin/group/commit, `max_alive` queue), per-player HUD (`hudLines`), `hooks` (timerDone, waveCleared, lost, newGame), `resetGame`, `gameNo`, `timer_ended` |
+| `roster.js` | `MOBS` (attackers and bosses, default modules, spawn height, targeting), `MODULES` ranges |
+| `spawner.js` | Spawning, spawn points, boss arrival announcements |
+| `breach.js` | Block damage map (× `damage_mult`), stuck detection (first `max_attackers` mobs, bosses first), modules: dig, detonate_stuck, siege_arrow, artillery, summon; breach config incl. `max_alive` |
+| `auto.js` | Auto DM: prep → generated wave → intermission (supply drop, restock, tower) → …; watchdog; wave timeout from the last spawn |
+| `economy.js` | `coins` scoreboard (not displayed), settings, wave pay, `BOUNTY`, `payBounty` |
+| `progression.js` | XP, instant level-ups, skill points (`dm_xp`, `dm_level`, `dm_sp`), round XP, `start_sp` |
+| `stats.js` | Six skills, per-game reset, benefits, skill vendors, Armorer, the personal HUD text |
 | `loadout.js` | Spawn kit; armour at the Armor level, **locked in slot**, kept on death, enchanted per Armorer |
 | `shop.js` | Vendor kinds (`VENDORS`), `spawnVendor`, routing, Engineer and Provisioner stock |
 | `mason.js` | Building blocks by the stack, priced from breach HP |
-| `pawn.js` | The Pawnbroker: buys loot for coins (`BUYS` price table) |
+| `pawn.js` | The Pawnbroker: buys loot (`BUYS`) |
 | `ui.js` | Shared form menus, `charge`, `sell`, `giveItem` |
-| `defenses.js` | Turrets (tiers, script-kept HP, repair/upgrade/pick-up menu, limits) and mines; arrow cleanup |
+| `defenses.js` | Turrets (tiers, script-kept HP, repair/upgrade/pick-up menu, limits), mines, the `dtc:placer` item component, turret arrow cleanup |
 | `depot.js` | Free supply depot pavilion, barrels (`kits.js`), path to the core, `Builder` (rotated local frame) |
-| `market.js` | Market Street structure and vendor stalls (built with a temporary ticking area) |
+| `market.js` | Market Street (8 stalls, plaza, Pawnbroker stand), vendor placement, built with a temporary ticking area |
 | `tower.js` | Procedural dungeon towers with guards and loot near the spawn (avoids Market Street) |
-| `rewards.js` | Supply-drop item rain, `lootStack` |
+| `rewards.js` | Supply-drop item rain, `lootStack` (tower and drop loot pool) |
 | `players.js` | Player snapshots for the DM tab |
 | `perf.js` | `dm:perf` tick timing sampler, `dm:stress` test helper |
 
 ### World data
 
 - World dynamic properties: `dtc:core`, `dtc:depot`, `dtc:points`,
-  `dtc:game` (incl. `game_no`), `dtc:auto`, `dtc:tower`, `dtc:config`
-  (breach), `dtc:economy`, `dtc:progression`, `dtc:mines`, `dtc:market`.
+  `dtc:game` (incl. `game_no`, `timer_ended`), `dtc:auto`, `dtc:tower`,
+  `dtc:config` (breach: `breach_mult`, `damage_mult`, `decay_rate`,
+  `max_attackers`, `max_alive`, `hardness`), `dtc:economy`,
+  `dtc:progression`, `dtc:mines`, `dtc:market`.
 - Player: `dtc:stats` (`{game, ranged, melee, health, regen, armor,
   engineer, armor_ench}`).
-- Entities: turrets `dtc:owner`, `dtc:tier`, `dtc:eng`; vendors `dtc:shop`;
-  attackers `dtc:last_hit_by`; guards `dtc:home`, `dtc:tower`.
-- Scoreboards: `coins` (sidebar), `dm_xp`, `dm_level`, `dm_sp`.
+- Entities: attackers `dtc:wave`, `dtc:modules`, `dtc:targeting`,
+  `dtc:last_hit_by`; turrets `dtc:owner`, `dtc:tier`, `dtc:eng`; vendors
+  `dtc:shop`; guards `dtc:home`, `dtc:tower`.
+- Scoreboards: `coins`, `dm_xp`, `dm_level`, `dm_sp` (none displayed; each
+  player's coins show on their own HUD line).
 
 ### Hub side (Crafty fork)
 
 | File | Role |
 | --- | --- |
-| `app/classes/dm/protocol.py` | Action schemas, `validate_action`, world actions |
+| `app/classes/dm/protocol.py` | Action schemas, `MOBS`/`MODULES` mirror, wave limits, `validate_action`/`validate_wave`, world actions, `ui_roster` |
 | `app/classes/dm/log_parser.py`, `session.py` | Parse `[DM]` lines; per-server state and event feed |
 | `app/classes/dm/world_map.py`, `world_snapshot.py` | Pure-Python LevelDB + Bedrock chunk reader; top-down map renders from a safe world copy (`save hold/query/resume`) |
-| `app/classes/controllers/dm_controller.py` | Sessions, sending, armed waves (auto-launch when a timer ends), map refresh, server stats |
+| `app/classes/controllers/dm_controller.py` | Sessions, sending, armed waves (saved, resumed), map refresh, server stats |
 | `app/classes/web/routes/api/servers/server/dm.py` | The DM API route (needs the Commands permission) |
 | `app/classes/web/routes/api/crafty/remote_nodes/index.py` | Remote-server DM handler |
 | `app/classes/remote_nodes/node_client.py` | Pinned-cert node client (`download` used by the map) |
-| `app/frontend/static/assets/js/shared/dm.js`, `dm-map.js` | The DM tab UI (cards: game, waves, auto DM, towers, economy, levels, world, setup, players, chat, map, feed) |
+| `app/frontend/static/assets/js/shared/dm.js`, `dm-map.js` | The DM tab UI |
 | `app/frontend/static/assets/css/partial/crafty-dm.css` | Styles |
 | `app/frontend/templates/panel/server_dm.html`, `remote_dm.html` | Tab templates |
-| `tests/classes/dm/` | protocol, session, world-map tests |
+| `tests/classes/dm/` | protocol, session/controller (incl. armed waves), world-map tests |
 
-## 6. The game as implemented (v0.7.x)
+DM tab layout: status strip; world map; Players (per-player actions: to
+core, heal, give, message, +1 SP, Spectate / Back to survival, kick) and
+Chat; Wave builder (generator, groups, red Boss buttons, launch / launch
+when timer ends) and Events feed; Game flow, Auto DM, **Bosses**, Rewards
+(supply drop, tower), Economy (pay, bounties, team share, starting coins,
+block price, repair rate, limits, prices, defenses, levels incl. starting
+SP, new game), Tuning (block damage ×, breach ×, decay, max tracked, max
+mobs alive), World, Setup (world setup, depot, Market Street).
+
+## 6. The game as implemented (v0.7.5)
 
 - **Flow:** setup → prep (timer) → wave → intermission → … → won/lost.
   Clearing the final wave wins; the core dying loses. `new_game` resets the
   wave count and every player.
 - **Auto DM defaults:** prep 180 s, intermission 90 s, 10 waves, difficulty
   2 + 0.7/wave (cap 10), flyers on, supply drop each intermission, depot
-  restock every 3 waves, a tower every 2 intermissions, wave timeout 420 s.
-  Wave sizes: ≈ 18–31 mobs for waves 1–6, then 38, 57, 94, 155 (wave 10,
-  difficulty 8.3); difficulty 9 ≈ 244, 10 ≈ 430 (budget `8 + 7d + 6·max(0,
-  d−5)³`, same in the DM tab generator). Limits: 1,000 mobs per wave, 200 per
-  group and per mob type, 40 groups. The auto DM's wave timeout counts from
-  the last spawn, and never fires while spawns are queued. **Max mobs alive** (`config max_alive`,
-  default 150): wave spawns past the cap queue and come in (≤ 6 per 5 ticks)
-  as others die; `wave_capped` is emitted once per wave. DM `spawn` commands
-  ignore the cap.
+  restock every 3 waves, a tower every 2 intermissions, wave timeout 420 s
+  after the last spawn (never while spawns are queued). Wave sizes ≈ 18–31
+  mobs for waves 1–6, then 38, 57, 94, 155 (difficulty 8.3); difficulty 9 ≈
+  244, 10 ≈ 430 (budget `8 + 7d + 6·max(0, d−5)³`, same in the DM tab
+  generator). The auto DM doesn't add bosses.
+- **Wave limits:** 1,000 mobs per wave, 200 per group and per mob type, 40
+  groups. **Max mobs alive** (`max_alive`, default 150): spawns past the cap
+  queue and come in (≤ 6 per 5 ticks) as others die; `wave_capped` once per
+  wave. DM `spawn` commands (≤ 50 per command) ignore the cap.
 - **Attackers:** zombie, skeleton, swarmer, digger, sapper, siege skeleton,
   phantom, blaze, ghast (ghast targets the core only; artillery module).
 - **Bosses** (`dm_boss` family, boss bar, 0.9 knockback resistance,
-  announced on arrival and defeat): Warlord (400 HP, scale 2.4, dig 4),
-  Bone Colossus (300, siege_arrow 5, fast long-range volleys), Necromancer
-  (200, `summon` module: 3 swarmers every 12 s, not part of the wave, within
-  max_alive), Demolisher (150, power-7 blast, detonates after 3 s stuck),
-  Dread Ghast (250, artillery every 2.5 s). Bounties 40–80. Bosses always
-  get their breach modules (sorted ahead of the 60 tracked attackers).
-- **Coins are private:** no scoreboard is displayed; each player sees their
-  own balance on their HUD line.
+  announced on arrival and defeat): Warlord (400 HP, scale 2.4, dig 4,
+  netherite gear), Bone Colossus (300, siege_arrow 5, 1.2 s volleys to 28
+  blocks), Necromancer (200, `summon`: 3 swarmers every 12 s, not part of
+  the wave, within `max_alive`), Demolisher (150, power-7 blast, detonates
+  after 3 s stuck), Dread Ghast (250, artillery every 2.5 s). Bounties 40–80.
+- **Breaching:** every bit of block damage attackers deal (digging, siege
+  arrows) × `damage_mult` (default **8**; a lone digger breaks cobblestone in
+  ≈ 0.5 s). Block toughness (`breach_mult`, hardness table) and decay are
+  separate; explosions break blocks outright.
 - **Fresh start each game:** 1,000 coins (`start_coins`) and 2 skill points
-  (progression `start_sp`), level 1 in all six skills, level-1 kit (locked leather armour, stone sword, bow, 32 arrows).
-  Players from an older game or version are wiped on first appearance;
-  never-seen players keep their (starting) items.
+  (`start_sp`), level 1 in all six skills, level-1 kit (locked leather
+  armour, stone sword, bow, 32 arrows). Players from an older game or
+  version are wiped on first appearance; never-seen players keep their
+  (starting) items.
+- **HUD (action bar, per player, every second):** the game line (wave,
+  timer, core HP) when there is one, then "N coins · Level L · xp/next XP ·
+  skill points to spend" and each skill's level (gold at 5). Coins are only
+  ever shown to their owner.
 - **Income:** wave pay 50 + 10 × wave to everyone; bounty per kill (swarmer
   1, zombie 2, skeleton 3, digger/siege/phantom/guards 4, sapper 5, blaze 6,
-  ghast 12, captain 20): full to the final blow, 50% to everyone else
-  (`bounty_share`). Tower clear: +100 coins and +150 XP each. Estimate
-  ≈ 2,050–2,200 coins earned per player over a default 10-wave game, on
-  top of the starting coins.
+  ghast 12, captain 20, bosses 40–80): full to the final blow, 50% to
+  everyone else (`bounty_share`). Tower clear: +100 coins and +150 XP each.
+  ≈ 2,050–2,200 coins earned per player over a default 10-wave game, plus
+  loot sold to the Pawnbroker. Kill XP = bounty × 10 to the killer; round XP
+  50 + 25 × wave to everyone; levels come as soon as XP is enough.
 - **Skills** (level n→n+1 costs n skill points, max 5): Ranged/Melee +25%
   damage per level; Health +2 hearts per level; Regeneration 0.25→1.2 HP/s
   for everyone; Armor tier leather→netherite (free, locked); Engineering +1
@@ -259,11 +310,17 @@ script, run it, never hand-edit the output.** The main pack uses stable
   Alchemist (skill + gear by level), Armorer (Armor; Protection/Blast/
   Projectile I-IV, Thorns I-III, Feather Falling I-IV on the locked armour).
   Prices live in `shop.js`, `stats.js`, `mason.js`.
+- **Pawnbroker** (plaza): buys tower and supply-drop loot — diamond 20,
+  totem 120, enchanted golden apple 100, golden apple 15, diamond sword 30,
+  iron sword/pickaxe 8, bow/shield 6, ender pearl 5, iron ingot 3, golden
+  carrot 1. Never buys depot freebies, food, arrows or blocks; always below
+  shop prices (no arbitrage).
 - **Turrets:** arrow (150), flak (200, flyers), frost (120). Base HP 40/40/30
-  × tier (1, 1.5, 2) × Engineering. Talk to a turret: repair
-  (`repair_rate` 0.5 coins/HP), upgrade (1×/1.5× the turret's price),
-  pick up (owner, full HP). Limits: `turret_limit` 3 / `mine_limit` 10 per
-  player plus Engineering.
+  × tier (1, 1.5, 2) × Engineering, shown as a bar on the name tag. Placed by
+  using the item on a block (`dtc:placer`). Talk to a turret: repair
+  (`repair_rate` 0.5 coins/HP), upgrade (1×/1.5× the turret's price), pick
+  up (owner, full HP). Limits: `turret_limit` 3 / `mine_limit` 10 per player
+  plus Engineering. Mines: blast (40), frost (30).
 - **Free depot:** cobblestone, dirt, torches, workshop, enchanting kit only.
 
 ## 7. Tools and everyday commands
@@ -274,7 +331,7 @@ mc-defend; default is dev.
 | Command | What |
 | --- | --- |
 | `npx tsc -p jsconfig.json` | Type-check the scripts. Run before every deploy. |
-| `python tools/gen_entities.py` | Regenerate entity/item/lang JSON after editing the generator |
+| `python tools/gen_entities.py` | Regenerate entity/item/lang JSON after editing the generator or templates |
 | `python tools/deploy.py` | Dev build (patch 1000+) → install on mc-testing, restart, wait for "script loaded" |
 | `python tools/dm.py <action> '<json>'` | Send `dm:<action>` and print the `[DM]` replies |
 | `python tools/dm.py raw <command>` | Any console command; prints the last console lines |
@@ -290,10 +347,13 @@ mc-defend; default is dev.
    Keep the patch below 1000.
 2. `git commit -m "Release X.Y.Z: …"`, `git tag -a vX.Y.Z -m "…"`, push with
    `--follow-tags`.
-3. `DTC_TARGET=beta python tools/deploy.py --beta` (refuses a dirty tree or
+3. Restart warning if players are online (see §2).
+4. `DTC_TARGET=beta python tools/deploy.py --beta` (refuses a dirty tree or
    an untagged HEAD).
-4. If the release changes world structures: `DTC_TARGET=beta python
-   tools/dm.py depot '{"containers_only":true}'` and/or `market '{}'`.
+5. If the release changes world structures: `depot '{"containers_only":true}'`,
+   `market '{}'` or `vendor '{}'` (vendor also adds new stands, e.g. the
+   Pawnbroker's).
+6. Check: `status`, `raw list`, player modes, the console for errors.
 
 **Testing without a player:**
 - Far chunks aren't loaded with nobody online. Use a temporary ticking area
@@ -303,7 +363,7 @@ mc-defend; default is dev.
   `raw testfor @e[type=dm:vendor]`.
 - `dm.py probe '{"on":true,"every":20}'` streams attacker positions and HP;
   `perf '{"on":true,"every":100}'` streams tick timing.
-- In-game behaviour (forms, combat, locked items) needs Wayne.
+- In-game behaviour (forms, visuals, combat, locked items) needs a player.
 
 ## 8. Gotchas we've already paid for
 
@@ -311,16 +371,24 @@ mc-defend; default is dev.
   mangled. Write patch scripts to a file (or use the Edit tool). Paths with a
   leading `/` get rewritten; `tools/node.py` accepts paths without it.
 - `getDynamicProperty` fails during early execution; load state in
-  `worldLoad`/start functions.
+  `worldLoad`/start functions. Custom item/block components must be
+  registered in `system.beforeEvents.startup`.
+- **A plain custom item has no use**: `afterEvents.playerInteractWithBlock`
+  never fires for it. Give it a custom component with `onUseOn` (our
+  `dtc:placer`). This bug let testers buy turrets they couldn't place.
+- Client entity files: use vanilla's 1.8.0-format templates. The 1.26 zombie
+  file and the 1.10 creeper file both rendered our mobs invisible.
 - Entity JSON: `pushable` takes no `value`; `float_duration`/`hover_height`
-  need `{min,max}`; `attack_range` not `attack_radius`. 1.26-format client
-  files render custom entities invisible: use the 1.8/1.10 templates. Blaze
-  and ghast need `runtime_identifier`. `minecraft:fireball` isn't
-  summonable (we use `dm:fireball`).
+  need `{min,max}`; `attack_range` not `attack_radius`. Blaze and ghast need
+  `runtime_identifier`. `minecraft:fireball` isn't summonable (we use
+  `dm:fireball`). `minecraft:scale` doesn't scale the collision box (set it
+  per mob).
 - Bedrock item/block ids differ from Java: `fence_gate`, `wooden_door`,
   `bed`, `brick_block`, `stone_stairs`, `end_bricks`, `nether_brick`,
   `stonecutter_block`, `web`; no `spectral_arrow`. Potions need the `give`
   command with a data value (no stable API).
+- A sidebar/list scoreboard shows **everyone's** scores to everyone; use
+  the per-player action bar for private numbers.
 - `forEach(fn)` passes the index as a second argument; `refreshArmor(p,
   rebuild)` was nearly called with `rebuild = index`.
 - Infighting: `hurt_by_target` filters exclude `dm_attacker` and `dm_guard`.
@@ -332,10 +400,13 @@ mc-defend; default is dev.
 - After installing a new world, the packs must be enabled (deploy PATCHes
   the addon flags).
 - Restart detection compares the stats `started` time (old logs lie).
+- `system.currentTick` carries on across server restarts, so phase timers
+  (`ends_tick`) survive a deploy.
 - A depot rebuild must reuse the stored floor y (a survey reads the roof as
   ground) and demolish before relocating.
-- Tower sites skip the Market Street footprint (they were placed straight
-  behind the depot, where the street now is).
+- Tower sites skip the Market Street footprint.
+- Aborting a wave (incl. `kill_all`) removes its mobs before `kill_all`
+  counts, so `removed` can read 0.
 - CRLF warnings on commit are harmless.
 
 ## 9. Performance limits (stress test, dev, 2026-10-04)
@@ -352,48 +423,47 @@ stayed ≈ 500–600 MB (≤ 46% of the host). 20 TPS is full speed.
 | 100 mobs vs 100 / 150 / 200 turrets | 16 / 12.5 / 10.9 (1,300–1,800 stray arrows) |
 | 200 mobs vs 25–100 turrets | 10–12.5 |
 
-Safe ceiling ≈ 150 live attackers. Normal games (≈ 35 mobs, 10–30 turrets)
-have about 4× headroom. The turret-arrow cleanup (b581900) is deployed on
-dev but **not yet measured**; the earlier numbers are without it. Raw
-results: `dist/stress_before.log`, `dist/stress.json` (not committed).
+Safe ceiling ≈ 150 live attackers (hence `max_alive` 150). The turret-arrow
+cleanup is **not yet measured**; the turret numbers above are without it.
+Raw results: `dist/stress_before.log`, `dist/stress.json` (not committed).
 
 ## 10. Current state
 
-- **v0.7.3** (tag `v0.7.3`): turret/mine items place through a `dtc:placer`
-  custom item component (the old `playerInteractWithBlock` listener never
-  fired for plain items, so nothing could be placed); players level up as
-  soon as XP is enough, not at round end.
-- **v0.7.4** (tag `v0.7.4`): status reports `timer_ended`, so the panel's
-  armed-wave watcher (now saved to `app/config/dm_armed.json` and resumed
-  after a panel restart) can tell a timer ran out while it was down.
-- **v0.7.5** (tag `v0.7.5`, on beta): bosses, private coins (no scoreboard
-  display), big waves (1,000 / 200 per type, steep late curve, timeout from
-  last spawn), block damage ×8 (`damage_mult`), the Pawnbroker on the plaza
-  (`pawn.js`: buys tower/supply-drop loot below shop prices; never buys
-  depot freebies, food or arrows), Sappers/Demolishers visible again (creeper
-  client template switched to the 1.8 format).
-- **Earlier, v0.7.2:** world rules on load, turret arrow
-  cleanup, per-player HUD (level, XP, skill points, skill levels), 1,000
-  starting coins / 2 SP, max mobs alive cap (150), `dm:perf`, `dm:stress`.
-- **Dev:** same as beta unless noted in later commits.
-- **Fork:** `local/nelson-next` c0c1e3ff (team share of bounties). The
-  running panel only has it after Wayne restarts the Crafty service.
-- **Untested in-game:** every vendor menu (Engineer, Mason, Provisioner,
-  skill vendors, Armorer upgrades), turret repair/upgrade/pick-up menu,
-  locked armour (incl. the hotbar-swap shortcut), the damage/health/regen
-  benefits, the returning-player wipe on beta, Market Street's look up close,
-  enchantment names (density, impaling).
+- **Add-on v0.7.5** on dev and beta (tags v0.7.2 … v0.7.5 today):
+  - 0.7.2: world rules on load, turret arrow cleanup, per-player HUD, 1,000
+    coins / 2 SP start, max mobs alive, `dm:perf`, `dm:stress`.
+  - 0.7.3: turrets and mines placeable (`dtc:placer`), instant level-ups.
+  - 0.7.4: `timer_ended` in status (armed waves across panel restarts).
+  - 0.7.5: bosses, private coins, big waves, block damage ×8, Pawnbroker,
+    visible Sappers/Demolishers.
+- **Fork** `local/nelson-next` 2fbaa7f1. The running panel only has fork
+  changes after Wayne restarts the Crafty service; as of the 0.7.5 push he
+  had not restarted since the armed-wave fix (f029ee11), so the Bosses card,
+  spectator button, block damage field, big-wave limits and saved armed
+  waves are pending that restart.
+- **Untested in-game:** turret/mine placement after the fix; boss visuals and
+  boss bars; Sapper/Demolisher visibility after the template change; the
+  Pawnbroker menu; the coins-on-HUD line; every vendor menu (Engineer,
+  Mason, Provisioner, skill vendors, Armorer upgrades); turret repair /
+  upgrade / pick-up menu; locked armour (incl. the hotbar-swap shortcut);
+  damage/health/regen benefits; Market Street up close; enchantment names
+  (density, impaling); balance with block damage ×8.
 
 ## 11. Backlog
 
 Near term:
-1. Re-run `python tools/stress.py run turrets` to measure the arrow cleanup.
-2. Rewrite README.md from this document.
+1. Confirm the in-game items above with the testers.
+2. Re-run `python tools/stress.py run turrets` to measure the arrow cleanup.
 3. Show `perf` (TPS) on the DM tab next to CPU/memory.
-4. Clean up the dev stress arena (or re-run `dm:setup` on a fresh dev world).
+4. Check the phantom client template (1.10 format) and switch it to 1.8 if
+   phantoms turn out invisible.
+5. Rebalance walls for block damage ×8 if needed (Mason prices, repair).
+6. Clean up the dev stress arena (or re-run `dm:setup` on a fresh dev world).
 
-Ideas discussed, not built: skill-point respec, selling items back, team
-coin pooling, more turret types, sweeping DM tools for structures.
+Ideas discussed, not built: bosses in auto-DM finals, skill-point respec,
+team coin pooling, more turret types, DM tools for sweeping structures.
 
-Economy tuning knobs (DM tab Economy card): wave pay, bounty ×, team share,
-starting coins, block price, repair rate, turret/mine limits, prices.
+Tuning knobs on the DM tab: Economy (wave pay, bounty ×, team share,
+starting coins, block price, repair rate, turret/mine limits, prices),
+Levels (round/kill XP, SP per level, starting SP), Tuning (block damage ×,
+breach ×, decay, max tracked, max mobs alive), Auto DM settings.
