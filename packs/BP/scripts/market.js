@@ -294,8 +294,22 @@ function whileLoaded(b, label, fn) {
   }, 10);
 }
 
+// The Pawnbroker keeps a stand on the plaza, between the street and the
+// fountain: a counter of barrels and a sign. Placed with the vendors, so a
+// market built before the Pawnbroker existed gets the stand too.
+const PAWN = { x: 0, z: PLAZA.z1 - 2 };
+
+function pawnStand(b) {
+  for (const x of [-2, 2]) b.set(PAWN.x + x, 1, PAWN.z - 1, "minecraft:barrel", { facing_direction: 1 });
+  b.set(PAWN.x + 2, 2, PAWN.z - 1, "minecraft:lantern", { hanging: false });
+  b.sign(PAWN.x - 2, 2, PAWN.z - 1, "§lPawnbroker§r\nbuys tower loot\n§7for coins", "south");
+}
+
 function placeVendors(b) {
   for (const [kind, side, slot] of STALLS) spawnVendor(vendorSpot(b, side, slot), kind);
+  pawnStand(b);
+  const at = b.at(PAWN.x, 1, PAWN.z - 1);
+  spawnVendor({ x: at.x + 0.5, y: at.y, z: at.z + 0.5 }, "pawnbroker");
 }
 
 /** Puts every vendor back at their counter. */

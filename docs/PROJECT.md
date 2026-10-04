@@ -5,7 +5,7 @@ describes what exists, where it lives, how to change and ship it, the rules
 of the road, and what's next. **This file is authoritative; README.md is out
 of date** (it still describes the 0.6 Quartermaster and depot).
 
-Last updated: 2026-10-04, add-on v0.7.4 on dev (beta: see Current state).
+Last updated: 2026-10-04, add-on v0.7.5 on dev and beta.
 
 ---
 
@@ -173,6 +173,7 @@ script, run it, never hand-edit the output.** The main pack uses stable
 | `loadout.js` | Spawn kit; armour at the Armor level, **locked in slot**, kept on death, enchanted per Armorer |
 | `shop.js` | Vendor kinds (`VENDORS`), `spawnVendor`, routing, Engineer and Provisioner stock |
 | `mason.js` | Building blocks by the stack, priced from breach HP |
+| `pawn.js` | The Pawnbroker: buys loot for coins (`BUYS` price table) |
 | `ui.js` | Shared form menus, `charge`, `sell`, `giveItem` |
 | `defenses.js` | Turrets (tiers, script-kept HP, repair/upgrade/pick-up menu, limits) and mines; arrow cleanup |
 | `depot.js` | Free supply depot pavilion, barrels (`kits.js`), path to the core, `Builder` (rotated local frame) |
@@ -365,7 +366,13 @@ results: `dist/stress_before.log`, `dist/stress.json` (not committed).
 - **v0.7.4** (tag `v0.7.4`): status reports `timer_ended`, so the panel's
   armed-wave watcher (now saved to `app/config/dm_armed.json` and resumed
   after a panel restart) can tell a timer ran out while it was down.
-- **Beta:** v0.7.2 until 0.7.4 is deployed (tag `v0.7.2`): world rules on load, turret arrow
+- **v0.7.5** (tag `v0.7.5`, on beta): bosses, private coins (no scoreboard
+  display), big waves (1,000 / 200 per type, steep late curve, timeout from
+  last spawn), block damage ×8 (`damage_mult`), the Pawnbroker on the plaza
+  (`pawn.js`: buys tower/supply-drop loot below shop prices; never buys
+  depot freebies, food or arrows), Sappers/Demolishers visible again (creeper
+  client template switched to the 1.8 format).
+- **Earlier, v0.7.2:** world rules on load, turret arrow
   cleanup, per-player HUD (level, XP, skill points, skill levels), 1,000
   starting coins / 2 SP, max mobs alive cap (150), `dm:perf`, `dm:stress`.
 - **Dev:** same as beta unless noted in later commits.

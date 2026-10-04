@@ -247,6 +247,7 @@ const VENDOR_SPOTS = [
   ["engineer", 0, 0],
   ["mason", 0, 2],
   ["provisioner", -2, 3],
+  ["pawnbroker", 1, 4],
   ["ranged", -2, -2],
   ["melee", 2, -2],
   ["armor", 2, 3],

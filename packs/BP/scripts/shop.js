@@ -8,6 +8,7 @@ import { world } from "@minecraft/server";
 import { coreEntity, labelCore } from "./core.js";
 import { coinsOf, econ } from "./economy.js";
 import { openMason } from "./mason.js";
+import { openPawnbroker } from "./pawn.js";
 import { CATEGORIES, openSkillShop, skillBody, trainButton } from "./stats.js";
 import { charge, giveItem, menu, priceText, reopen, sell } from "./ui.js";
 import { overworld } from "./util.js";
@@ -174,6 +175,7 @@ export const VENDORS = {
   engineer: "§6§lEngineer§r\n§7turrets, traps & repairs",
   mason: "§6§lMason§r\n§7free dirt & cobble, blocks for coins",
   provisioner: "§6§lProvisioner§r\n§7tools, food & supplies",
+  pawnbroker: "§6§lPawnbroker§r\n§7buys tower loot for coins",
   ...Object.fromEntries(
     Object.entries(CATEGORIES)
       .filter(([id]) => id !== "engineer")
@@ -200,6 +202,7 @@ export function startShop() {
     const kind = String(event.target.getDynamicProperty("dtc:shop") ?? "engineer");
     if (kind === "mason") openMason(event.player);
     else if (kind === "provisioner") openProvisioner(event.player);
+    else if (kind === "pawnbroker") openPawnbroker(event.player);
     else if (kind !== "engineer" && CATEGORIES[kind]) openSkillShop(event.player, kind);
     else openEngineer(event.player);
   });
