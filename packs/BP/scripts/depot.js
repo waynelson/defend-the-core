@@ -82,6 +82,15 @@ export class Builder {
     if (perm) this.dim.fillBlocks(new BlockVolume(this.at(x1, y1, z1), this.at(x2, y2, z2)), perm);
   }
 
+  /** Like fill, but only replaces blocks of `types` (e.g. water). */
+  replace(x1, y1, z1, x2, y2, z2, ids, types) {
+    const perm = this.perm(ids);
+    if (!perm) return;
+    this.dim.fillBlocks(new BlockVolume(this.at(x1, y1, z1), this.at(x2, y2, z2)), perm, {
+      blockFilter: { includeTypes: types },
+    });
+  }
+
   /** A standing sign whose front faces the local direction `face`. */
   sign(dx, dy, dz, text, face = "south") {
     const perm = this.set(dx, dy, dz, ["minecraft:spruce_standing_sign", "minecraft:standing_sign"], {

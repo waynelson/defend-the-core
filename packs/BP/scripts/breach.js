@@ -291,6 +291,43 @@ function summon(mob, state, params) {
   if (raised) emit("summon", { mob: mob.typeId, count: raised });
 }
 
+// fly_in: while further than `standoff` blocks (flat) from the core, push
+// the mob toward it and hold it about `height` blocks over the ground under
+// it, so terrain and walls don't trap it; inside the standoff its own AI
+// takes over (blazes shoot from range).
+const FLY_PUSH = 0.35;
+const FLY_LIFT = 0.18;
+const FLY_CLIMB = 0.5; // when it barely moved since the last sample: up and over
+const FLY_UNSTICK_SAMPLES = 20; // 10 s of samples without progress
+
+function flyIn(mob, state, core, params) {
+  const p = mob.location;
+  const dx = core.x - p.x;
+  const dz = core.z - p.z;
+  const flat = Math.hypot(dx, dz);
+  const prev = state.flyPrev;
+  state.flyPrev = { x: p.x, z: p.z };
+  if (flat <= params.standoff) return;
+  let lift = 0;
+  const ground = mob.dimension.getTopmostBlock({ x: Math.floor(p.x), z: Math.floor(p.z) });
+  if (ground) {
+    const over = p.y - (ground.location.y + 1);
+    if (over < params.height) lift = FLY_LIFT;
+    else if (over > params.height + 6 && p.y > core.y + 4) lift = -FLY_LIFT / 2;
+  }
+  const stalled = prev && Math.hypot(p.x - prev.x, p.z - prev.z) < 0.3;
+  state.flyStalled = stalled ? (state.flyStalled ?? 0) + 1 : 0;
+  if (stalled) lift = FLY_CLIMB;
+  // Boxed in (a cave pocket, under a canopy) for 10 s: lift it out on top of
+  // the terrain and let it carry on.
+  if (state.flyStalled >= FLY_UNSTICK_SAMPLES && ground) {
+    state.flyStalled = 0;
+    tryFx(() => mob.teleport({ x: p.x, y: ground.location.y + 1 + params.height, z: p.z }));
+    return;
+  }
+  tryFx(() => mob.applyImpulse({ x: (dx / flat) * FLY_PUSH, y: lift, z: (dz / flat) * FLY_PUSH }));
+}
+
 function artillery(mob, state, core, params) {
   const p = mob.location;
   const flat = Math.hypot(core.x - p.x, core.z - p.z);
@@ -389,6 +426,7 @@ function tick() {
       const modules = mobModules(mob);
       if (modules.artillery) artillery(mob, state, core, modules.artillery);
       if (modules.summon) summon(mob, state, modules.summon);
+      if (modules.fly_in) flyIn(mob, state, core, modules.fly_in);
     } catch {
       // the mob unloaded or died mid-sample
     }

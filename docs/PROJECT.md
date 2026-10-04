@@ -214,7 +214,8 @@ invisible, but suspect).
 | `ui.js` | Shared form menus, `charge`, `sell`, `giveItem` |
 | `defenses.js` | Turrets (tiers, script-kept HP, repair/upgrade/pick-up menu, limits), mines, the `dtc:placer` item component, turret arrow cleanup |
 | `depot.js` | Free supply depot pavilion, barrels (`kits.js`), path to the core, `Builder` (rotated local frame) |
-| `market.js` | Market Street (8 stalls, plaza, Pawnbroker stand), vendor placement, built with a temporary ticking area |
+| `market.js` | The mall (replaced Market Street): two storeys, 12 ground-floor shop units, 12 empty upper rooms, atrium leaderboards; waterproofs its site; vendor and label placement; built with a temporary ticking area |
+| `boards.js` | Per-game leaderboards (kills, coins earned) shown on `dm:label` floating text |
 | `tower.js` | Procedural dungeon towers with guards and loot near the spawn (avoids Market Street) |
 | `rewards.js` | Supply-drop item rain, `lootStack` (tower and drop loot pool) |
 | `players.js` | Player snapshots for the DM tab |
@@ -315,7 +316,16 @@ mobs alive), World, Setup (world setup, depot, Market Street).
   for everyone; Armor tier leather→netherite (free, locked); Engineering +1
   turret, +3 mines, +10% turret durability per level, turret tier II at 2,
   III at 4.
-- **Market Street** (behind the depot, away from the core): Engineer
+- **The mall** (behind the depot, away from the core; ≈ 29 × 33 blocks,
+  two storeys): glass front, double-height atrium with a skylight, 12
+  ground-floor shop units (west: Engineer, Mason, Provisioner, Pawnbroker,
+  2 × coming soon; east: Bowyer, Blacksmith, Armorer, Healer, Alchemist,
+  coming soon), each with a floating name over the door; the upper floor
+  (stairs at the back) has 12 empty rooms for server controls / player
+  settings later. Atrium leaderboards: **Top Killers** (final blows this
+  game) and **Top Earners** (coins earned this game, never balances).
+  `dm:market` builds or converts (clears Market Street first). Vendors:
+  Engineer
   (Engineering; turrets, mines, traps & redstone, core repair), Mason (free
   dirt/cobble; blocks by the stack at `block_price` × breach HP), Provisioner
   (tools, food, light, storage, utility), Bowyer, Blacksmith, Healer,

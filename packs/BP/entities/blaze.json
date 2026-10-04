@@ -103,7 +103,7 @@
         },
         "attack_range": {
           "min": 0.0,
-          "max": 48.0
+          "max": 18.0
         },
         "charge_shoot_trigger": 4.0,
         "burst_shots": 3,

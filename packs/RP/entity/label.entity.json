@@ -1,0 +1,18 @@
+{
+  "format_version": "1.8.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "dm:label",
+      "materials": {
+        "default": "entity_alphatest"
+      },
+      "textures": {
+        "default": "textures/entity/steve"
+      },
+      "geometry": {
+        "default": "geometry.humanoid"
+      },
+      "render_controllers": []
+    }
+  }
+}

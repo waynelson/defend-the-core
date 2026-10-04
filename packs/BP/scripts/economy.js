@@ -4,6 +4,7 @@
 // the turret or mine that did), and bounty_share of it to everyone else.
 
 import { DisplaySlotId, world } from "@minecraft/server";
+import { recordEarned } from "./boards.js";
 import { emit, store, stored } from "./util.js";
 
 const OBJECTIVE = "coins";
@@ -80,6 +81,8 @@ export function addCoins(player, delta, reason, quiet = false) {
   const change = Math.max(-before, Math.round(delta));
   objective().addScore(player, change);
   const balance = before + change;
+  // The Top Earners board counts what the game paid, not DM grants.
+  if (change > 0 && reason !== "dm") recordEarned(player.name, change);
   if (!quiet) emit("coins", { name: player.name, delta: change, reason, balance });
   return balance;
 }

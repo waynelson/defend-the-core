@@ -275,7 +275,8 @@ def behavior(name, mob):
                 },
                 "minecraft:shooter": {"def": "minecraft:fireball"},
             },
-            # Fires bursts of small fireballs, which set wooden defenses
+            # Fires bursts of small fireballs (from 18 blocks: further out it parks
+            # and shoots into the hills between it and the core), which set wooden defenses
             # alight. Its flight comes from the vanilla blaze runtime, which
             # walks on vanilla's components, so it keeps them.
             "blaze": {
@@ -286,7 +287,7 @@ def behavior(name, mob):
                 "minecraft:navigation.walk": {"avoid_damage_blocks": True, "avoid_water": True, "can_path_over_water": True},
                 "minecraft:behavior.float": {"priority": 0},
                 "minecraft:behavior.ranged_attack": {
-                    "priority": 3, "attack_interval": {"min": 3.0, "max": 5.0}, "attack_range": {"min": 0.0, "max": 48.0},
+                    "priority": 3, "attack_interval": {"min": 3.0, "max": 5.0}, "attack_range": {"min": 0.0, "max": 18.0},
                     "charge_shoot_trigger": 4.0, "burst_shots": 3, "burst_interval": 0.3,
                 },
                 "minecraft:shooter": {"def": "minecraft:small_fireball"},
@@ -464,6 +465,7 @@ def main():
         lines.append(f"entity.dm:{name}.name={turret['name']}")
     lines.append("entity.dm:vendor.name=Vendor")
     lines.append("action.interact.dtc_turret=Repair / Upgrade")
+    lines.append("entity.dm:label.name=Label")
     for item_id, item in ITEMS.items():
         lines.append(f"item.dm:{item_id}={item['name']}")
     lang.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -599,6 +601,44 @@ def turret(name, spec):
     }
 
 
+def label():
+    """Floating text: an entity with no model whose name tag is always shown
+    (shop names, the mall's leaderboards). Can't be hurt, pushed or moved."""
+    return {
+        "format_version": "1.26.50",
+        "minecraft:entity": {
+            "description": {"identifier": "dm:label", "is_summonable": True, "is_spawnable": False},
+            "components": {
+                "minecraft:type_family": {"family": ["dm_label", "inanimate"]},
+                "minecraft:health": {"value": 1, "max": 1},
+                "minecraft:collision_box": {"width": 0.1, "height": 0.1},
+                "minecraft:physics": {"has_gravity": False, "has_collision": False},
+                "minecraft:knockback_resistance": {"value": 1.0},
+                "minecraft:persistent": {},
+                "minecraft:fire_immune": {},
+                "minecraft:nameable": {"always_show": True, "allow_name_tag_renaming": False},
+                "minecraft:damage_sensor": {"triggers": [{"deals_damage": "no"}]},
+            },
+        },
+    }
+
+
+def label_client():
+    """No render controllers: nothing is drawn but the name tag."""
+    return {
+        "format_version": "1.8.0",
+        "minecraft:client_entity": {
+            "description": {
+                "identifier": "dm:label",
+                "materials": {"default": "entity_alphatest"},
+                "textures": {"default": "textures/entity/steve"},
+                "geometry": {"default": "geometry.humanoid"},
+                "render_controllers": [],
+            }
+        },
+    }
+
+
 def vendor():
     return {
         "format_version": "1.26.50",
@@ -662,6 +702,8 @@ def write_defenses():
         write(BP / f"{name}.json", turret(name, spec))
         write(RP / f"{name}.entity.json", renamed_template(spec["template"], f"dm:{name}"))
     write(BP / "vendor.json", vendor())
+    write(BP / "label.json", label())
+    write(RP / "label.entity.json", label_client())
     write(RP / "vendor.entity.json", renamed_template("wandering_trader", "dm:vendor"))
     items = ROOT / "packs/BP/items"
     items.mkdir(exist_ok=True)

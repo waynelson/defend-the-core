@@ -12,7 +12,8 @@ export const MOBS = {
   // Ghasts with player targeting rise out of firing range and stall
   // (tested), so they default to the core only.
   "dm:ghast": { label: "Siege Ghast", modules: { artillery: { interval_s: 5 } }, spawn_height: 8, targeting: "core_only" },
-  "dm:blaze": { label: "Blaze", modules: {}, spawn_height: 8 },
+  // Blazes walk on vanilla AI and snag on terrain; fly_in carries them in.
+  "dm:blaze": { label: "Blaze", modules: { fly_in: { standoff: 14, height: 5 } }, spawn_height: 8 },
   "dm:phantom": { label: "Phantom", modules: {}, spawn_height: 18 },
   // Bosses: big and tough, with a boss bar; announced when they arrive and
   // when they fall. The Necromancer keeps raising swarmers (summon).
@@ -32,6 +33,7 @@ export const MODULES = {
   siege_arrow: { damage_per_hit: [0.1, 20] },
   artillery: { interval_s: [2, 30] },
   summon: { interval_s: [3, 60], count: [1, 10] },
+  fly_in: { standoff: [4, 40], height: [0, 20] },
 };
 
 export const TARGETING = ["core_only", "prioritized", "nearest"];

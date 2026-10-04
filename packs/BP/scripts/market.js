@@ -1,11 +1,15 @@
-// Market Street: the vendors' quarter behind the supply depot (on the side
-// away from the core). An arch, a paved street with lamp posts, four themed
-// shops on each side with a vendor at the counter, and a plaza with a
-// fountain at the far end.
+// The Mall: the vendors' building behind the supply depot (on the side away
+// from the core). A modern two-storey hall: glass front, a double-height
+// atrium with a skylight, twelve shop units on the ground floor (six each
+// side, glass storefronts with a coloured band and a floating name), and
+// twelve empty rooms upstairs off glass-railed balconies, reached by a
+// staircase at the back (kept for server controls and player settings
+// later). The atrium holds the public leaderboards (boards.js).
 //
-// Laid out in the depot's frame (local +z points at the core, so the street
+// Laid out in the depot's frame (local +z points at the core, so the mall
 // runs toward -z). Building it far from players needs its chunks loaded:
-// a temporary ticking area covers it while it builds.
+// a temporary ticking area covers it while it builds. (Exported names stay
+// "market" for the rest of the add-on: Market Street was its first form.)
 
 import { system, world } from "@minecraft/server";
 import { depotBuilder } from "./depot.js";
@@ -15,106 +19,96 @@ import { emit } from "./util.js";
 const MARKET_PROP = "dtc:market";
 const AREA = "dtc_market";
 
-const STREET_START = -8; // local z where the street leaves the depot
-const STREET_END = -56;
-const PLAZA = { z1: -57, z2: -71, half: 11 };
-const SITE = { half: 12, z1: -8, z2: -72 };
-const STALL = { inner: 4, depth: 8, length: 9, first: -12, pitch: 11 };
+// Local geometry. Outer shell x = ±HALF, z FRONT..BACK; ground floor y 0,
+// upper floor y UPPER, roof y ROOF.
+const HALF = 14;
+const ATRIUM = 3; // open (double height) for x in -3..3
+const FRONT = -9;
+const BACK = -41;
+const UPPER = 6;
+const ROOF = 12;
+const STOREFRONT = 4; // ground-floor shop glass at x = ±4
+const ROOMFRONT = 7; // upper-floor room glass at x = ±7
+const ACCENT = 13; // each shop's feature back wall at x = ±13
+const DIVIDERS = [-10, -15, -20, -25, -30, -35, -40]; // walls between units
+// The whole area cleared before building: the mall plus where Market Street
+// used to stand.
+const CLEAR = { half: 14, z1: -8, z2: -72 };
 
-// [vendor kind, side (-1 west / +1 east of the street), slot from the depot]
-const STALLS = [
-  ["engineer", 1, 0],
-  ["mason", -1, 0],
-  ["provisioner", -1, 1],
-  ["ranged", 1, 1],
-  ["melee", -1, 2],
-  ["armor", 1, 2],
-  ["health", -1, 3],
-  ["regen", 1, 3],
+const WHITE = "minecraft:white_concrete";
+const GLASS = "minecraft:glass";
+const PANE = "minecraft:glass_pane";
+const LIGHT = ["minecraft:sea_lantern", "minecraft:glowstone"];
+
+// [kind, side (-1 west / +1 east), unit 0..5 from the entrance]; null kind
+// = an empty unit ("coming soon").
+/** @type {[string | null, number, number][]} */
+const UNITS = [
+  ["engineer", -1, 0], ["ranged", 1, 0],
+  ["mason", -1, 1], ["melee", 1, 1],
+  ["provisioner", -1, 2], ["armor", 1, 2],
+  ["pawnbroker", -1, 3], ["health", 1, 3],
+  [null, -1, 4], ["regen", 1, 4],
+  [null, -1, 5], [null, 1, 5],
 ];
 
 const THEMES = {
   engineer: {
-    sign: "Engineer", sub: "turrets & traps",
-    wall: "minecraft:deepslate_tiles", log: ["minecraft:stripped_dark_oak_log", "minecraft:dark_oak_log"],
-    floor: "minecraft:smooth_stone", planks: "minecraft:dark_oak_planks",
-    slab: ["minecraft:deepslate_tile_slab", "minecraft:dark_oak_slab"], counter: "minecraft:iron_block",
-    awning: ["minecraft:orange_wool", "minecraft:black_wool"],
-    decor: [["minecraft:dispenser"], ["minecraft:observer"], ["minecraft:redstone_block", "minecraft:redstone_lamp"], ["minecraft:piston"], ["minecraft:target"], ["minecraft:redstone_block", "minecraft:redstone_lamp"]],
+    name: "ENGINEER", sub: "turrets, traps & repairs", band: "minecraft:orange_concrete",
+    floor: "minecraft:smooth_stone", accent: "minecraft:deepslate_tiles",
+    decor: [["minecraft:dispenser"], ["minecraft:redstone_block", "minecraft:redstone_lamp"], ["minecraft:observer"], ["minecraft:piston"]],
   },
   mason: {
-    sign: "Mason", sub: "blocks by the stack",
-    wall: "minecraft:stone_bricks", log: ["minecraft:stripped_spruce_log", "minecraft:spruce_log"],
-    floor: "minecraft:polished_andesite", planks: "minecraft:stone_bricks",
-    slab: ["minecraft:stone_brick_slab"], counter: "minecraft:chiseled_stone_bricks",
-    awning: ["minecraft:light_gray_wool", "minecraft:white_wool"],
-    decor: [["minecraft:stonecutter_block"], ["minecraft:polished_granite"], ["minecraft:mossy_stone_bricks"], ["minecraft:polished_diorite"], ["minecraft:stonecutter_block"], ["minecraft:cut_sandstone"]],
+    name: "MASON", sub: "blocks by the stack", band: "minecraft:light_gray_concrete",
+    floor: "minecraft:polished_andesite", accent: "minecraft:stone_bricks",
+    decor: [["minecraft:stonecutter_block"], ["minecraft:polished_granite"], ["minecraft:mossy_stone_bricks"], ["minecraft:polished_diorite"]],
   },
   provisioner: {
-    sign: "Provisioner", sub: "tools, food & supplies",
-    wall: "minecraft:oak_planks", log: ["minecraft:oak_log"],
-    floor: "minecraft:spruce_planks", planks: "minecraft:oak_planks",
-    slab: ["minecraft:oak_slab", "minecraft:wooden_slab"], counter: "minecraft:barrel",
-    awning: ["minecraft:green_wool", "minecraft:white_wool"],
-    decor: [["minecraft:barrel", "minecraft:barrel"], ["minecraft:hay_block"], ["minecraft:composter"], ["minecraft:smoker"], ["minecraft:hay_block", "minecraft:pumpkin"], ["minecraft:barrel"]],
+    name: "PROVISIONER", sub: "tools, food & supplies", band: "minecraft:green_concrete",
+    floor: "minecraft:spruce_planks", accent: "minecraft:oak_planks",
+    decor: [["minecraft:barrel", "minecraft:barrel"], ["minecraft:smoker"], ["minecraft:composter"], ["minecraft:hay_block"]],
+  },
+  pawnbroker: {
+    name: "PAWNBROKER", sub: "buys tower loot", band: "minecraft:yellow_concrete",
+    floor: "minecraft:dark_oak_planks", accent: "minecraft:gold_block",
+    decor: [["minecraft:chest"], ["minecraft:barrel", "minecraft:barrel"], ["minecraft:lectern"], ["minecraft:barrel"]],
   },
   ranged: {
-    sign: "Bowyer", sub: "ranged skill & bows",
-    wall: "minecraft:birch_planks", log: ["minecraft:birch_log"],
-    floor: "minecraft:oak_planks", planks: "minecraft:birch_planks",
-    slab: ["minecraft:birch_slab", "minecraft:wooden_slab"], counter: "minecraft:fletching_table",
-    awning: ["minecraft:lime_wool", "minecraft:yellow_wool"],
-    decor: [["minecraft:target"], ["minecraft:fletching_table"], ["minecraft:hay_block", "minecraft:target"], ["minecraft:fletching_table"], ["minecraft:target"], ["minecraft:hay_block"]],
+    name: "BOWYER", sub: "ranged skill & bows", band: "minecraft:lime_concrete",
+    floor: "minecraft:oak_planks", accent: "minecraft:birch_planks",
+    decor: [["minecraft:target"], ["minecraft:fletching_table"], ["minecraft:hay_block", "minecraft:target"], ["minecraft:fletching_table"]],
   },
   melee: {
-    sign: "Blacksmith", sub: "melee skill & blades",
-    wall: "minecraft:polished_blackstone_bricks", log: ["minecraft:dark_oak_log"],
-    floor: "minecraft:cobblestone", planks: "minecraft:dark_oak_planks",
-    slab: ["minecraft:polished_blackstone_brick_slab", "minecraft:dark_oak_slab"], counter: "minecraft:smithing_table",
-    awning: ["minecraft:red_wool", "minecraft:black_wool"],
-    decor: [["minecraft:anvil"], ["minecraft:blast_furnace"], ["minecraft:grindstone"], ["minecraft:smithing_table"], ["minecraft:blast_furnace"], ["minecraft:iron_block"]],
+    name: "BLACKSMITH", sub: "melee skill & blades", band: "minecraft:red_concrete",
+    floor: "minecraft:polished_blackstone", accent: "minecraft:polished_blackstone_bricks",
+    decor: [["minecraft:anvil"], ["minecraft:blast_furnace"], ["minecraft:grindstone"], ["minecraft:smithing_table"]],
   },
   armor: {
-    sign: "Armorer", sub: "armour skill & enchants",
-    wall: "minecraft:brick_block", log: ["minecraft:spruce_log"],
-    floor: "minecraft:spruce_planks", planks: "minecraft:spruce_planks",
-    slab: ["minecraft:brick_slab", "minecraft:spruce_slab"], counter: "minecraft:blast_furnace",
-    awning: ["minecraft:blue_wool", "minecraft:white_wool"],
-    decor: [["minecraft:smithing_table"], ["minecraft:anvil"], ["minecraft:iron_block"], ["minecraft:blast_furnace"], ["minecraft:anvil"], ["minecraft:gold_block"]],
+    name: "ARMORER", sub: "armour skill & enchants", band: "minecraft:blue_concrete",
+    floor: "minecraft:spruce_planks", accent: "minecraft:brick_block",
+    decor: [["minecraft:smithing_table"], ["minecraft:anvil"], ["minecraft:iron_block"], ["minecraft:blast_furnace"]],
   },
   health: {
-    sign: "Healer", sub: "health skill & healing",
-    wall: "minecraft:smooth_quartz", log: ["minecraft:birch_log"],
-    floor: "minecraft:birch_planks", planks: "minecraft:birch_planks",
-    slab: ["minecraft:smooth_quartz_slab", "minecraft:birch_slab"], counter: "minecraft:white_concrete",
-    awning: ["minecraft:pink_wool", "minecraft:white_wool"],
-    decor: [["minecraft:cauldron"], ["minecraft:moss_block", "minecraft:flowering_azalea"], ["minecraft:brewing_stand"], ["minecraft:cauldron"], ["minecraft:moss_block", "minecraft:flowering_azalea"], ["minecraft:honey_block"]],
+    name: "HEALER", sub: "health skill & healing", band: "minecraft:pink_concrete",
+    floor: "minecraft:birch_planks", accent: "minecraft:smooth_quartz",
+    decor: [["minecraft:cauldron"], ["minecraft:moss_block", "minecraft:flowering_azalea"], ["minecraft:brewing_stand"], ["minecraft:honey_block"]],
   },
   regen: {
-    sign: "Alchemist", sub: "regen skill & potions",
-    wall: "minecraft:mud_bricks", log: ["minecraft:mangrove_log", "minecraft:jungle_log"],
-    floor: "minecraft:mangrove_planks", planks: "minecraft:mangrove_planks",
-    slab: ["minecraft:mud_brick_slab", "minecraft:mangrove_slab"], counter: "minecraft:bookshelf",
-    awning: ["minecraft:purple_wool", "minecraft:magenta_wool"],
-    decor: [["minecraft:brewing_stand"], ["minecraft:bookshelf", "minecraft:bookshelf"], ["minecraft:cauldron"], ["minecraft:amethyst_block"], ["minecraft:bookshelf", "minecraft:brewing_stand"], ["minecraft:brewing_stand"]],
+    name: "ALCHEMIST", sub: "regen skill & potions", band: "minecraft:purple_concrete",
+    floor: "minecraft:mangrove_planks", accent: "minecraft:mud_bricks",
+    decor: [["minecraft:brewing_stand"], ["minecraft:bookshelf", "minecraft:bookshelf"], ["minecraft:cauldron"], ["minecraft:amethyst_block"]],
+  },
+  soon: {
+    name: "COMING SOON", sub: "", band: "minecraft:gray_concrete",
+    floor: "minecraft:light_gray_concrete", accent: WHITE, decor: [],
   },
 };
-
-const BOTTOM = { "minecraft:vertical_half": "bottom" };
-const FENCE = ["minecraft:dark_oak_fence", "minecraft:fence"];
 
 export function marketBuilt() {
   return world.getDynamicProperty(MARKET_PROP) === true;
 }
 
-/** A shop's frame: (u from the street outward, v along the street) to the
- * builder's local (x, z). */
-function stallFrame(side, slot) {
-  const z0 = STALL.first - slot * STALL.pitch;
-  return { x: (u) => side * (STALL.inner + u), z: (v) => z0 - v };
-}
-
-/** Market Street's footprint in world x/z (with a margin), or undefined. */
+/** The mall's footprint in world x/z (with a margin), or undefined. */
 export function marketBounds(margin = 2) {
   if (!marketBuilt()) return undefined;
   let b;
@@ -123,153 +117,194 @@ export function marketBounds(margin = 2) {
   } catch {
     return undefined;
   }
-  const corners = [b.at(-SITE.half, 0, -4), b.at(SITE.half, 0, -4), b.at(-SITE.half, 0, SITE.z2), b.at(SITE.half, 0, SITE.z2)];
+  const corners = [b.at(-HALF, 0, -4), b.at(HALF, 0, -4), b.at(-HALF, 0, BACK), b.at(HALF, 0, BACK)];
   return {
     x1: Math.min(...corners.map((c) => c.x)) - margin, x2: Math.max(...corners.map((c) => c.x)) + margin,
     z1: Math.min(...corners.map((c) => c.z)) - margin, z2: Math.max(...corners.map((c) => c.z)) + margin,
   };
 }
 
-function vendorSpot(b, side, slot) {
-  const f = stallFrame(side, slot);
-  const at = b.at(f.x(1), 1, f.z(2));
-  return { x: at.x + 0.5, y: at.y, z: at.z + 0.5 };
+/** Unit `i`'s span along z: [front wall, back wall] and its door blocks. */
+function unitZ(i) {
+  const front = DIVIDERS[i];
+  const back = DIVIDERS[i + 1];
+  return { front, back, inner1: front - 1, inner2: back + 1, door: [front - 2, front - 3] };
 }
 
-/** A cheap repeatable "random" for street texture. */
-function noise(x, z) {
-  const n = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
-  return n - Math.floor(n);
-}
+/** Bedrock stairs' weirdo_direction for a world direction (ascending that way). */
+const STAIR_DIR = { east: 0, west: 1, south: 2, north: 3 };
 
 // ---------------------------------------------------------------- parts
 
-function* clearSite(b) {
-  for (let z = SITE.z1; z >= SITE.z2; z -= 8) {
-    const z2 = Math.max(SITE.z2, z - 7);
-    b.fill(-SITE.half, -6, z, SITE.half, -1, z2, "minecraft:dirt");
-    b.fill(-SITE.half, 1, z, SITE.half, 20, z2, "minecraft:air");
-    b.fill(-SITE.half, 0, z, SITE.half, 0, z2, "minecraft:grass_block");
+const FLUIDS = ["minecraft:water", "minecraft:flowing_water", "minecraft:lava", "minecraft:flowing_lava"];
+
+/** Keeps water out: fluids in a band around the site turn to dirt, and any
+ * left inside (or flowing in while it was open) is drained. A site below
+ * the local water level otherwise floods through the doors (seen on dev). */
+function* waterproof(b) {
+  const { half, z2 } = CLEAR;
+  const out = half + 3;
+  for (let z = -2; z >= z2 - 3; z -= 16) {
+    const zEnd = Math.max(z2 - 3, z - 15);
+    b.replace(-out, -3, z, -half - 1, 20, zEnd, "minecraft:dirt", FLUIDS);
+    b.replace(half + 1, -3, z, out, 20, zEnd, "minecraft:dirt", FLUIDS);
+    yield;
+  }
+  b.replace(-out, -3, z2 - 1, out, 20, z2 - 3, "minecraft:dirt", FLUIDS);
+  // In front, either side of the depot.
+  for (const side of [-1, 1]) b.replace(side * 8, -3, -2, side * out, 20, -4, "minecraft:dirt", FLUIDS);
+  yield;
+  for (let z = -4; z >= z2; z -= 8) {
+    b.replace(-half, -3, z, half, 20, Math.max(z2, z - 7), "minecraft:air", FLUIDS);
     yield;
   }
 }
 
-function* street(b) {
-  // Through the back of the depot.
-  b.fill(-1, 1, -5, 1, 4, -7, "minecraft:air");
-  b.fill(-1, 0, -5, 1, 0, -7, "minecraft:stone_bricks");
-  b.fill(-3, 0, STREET_START, 3, 0, STREET_END, "minecraft:stone_bricks");
-  b.fill(-3, 0, STREET_START, -3, 0, STREET_END, "minecraft:polished_andesite");
-  b.fill(3, 0, STREET_START, 3, 0, STREET_END, "minecraft:polished_andesite");
+function* clearSite(b) {
+  for (let z = CLEAR.z1; z >= CLEAR.z2; z -= 8) {
+    const z2 = Math.max(CLEAR.z2, z - 7);
+    b.fill(-CLEAR.half, -6, z, CLEAR.half, -1, z2, "minecraft:dirt");
+    b.fill(-CLEAR.half, 1, z, CLEAR.half, 20, z2, "minecraft:air");
+    b.fill(-CLEAR.half, 0, z, CLEAR.half, 0, z2, "minecraft:grass_block");
+    yield;
+  }
+}
+
+function* shell(b) {
+  // Through the back of the depot to the mall's doors.
+  b.fill(-1, 1, -5, 1, 4, -8, "minecraft:air");
+  b.fill(-1, 0, -5, 1, 0, -8, "minecraft:smooth_stone");
+  // Floors: polished atrium with grey edging, white upper floor.
+  b.fill(-HALF, 0, FRONT, HALF, 0, BACK, "minecraft:polished_diorite");
+  b.fill(-ATRIUM, 0, FRONT + 1, -ATRIUM, 0, BACK + 1, "minecraft:light_gray_concrete");
+  b.fill(ATRIUM, 0, FRONT + 1, ATRIUM, 0, BACK + 1, "minecraft:light_gray_concrete");
   yield;
-  for (let z = STREET_START; z >= STREET_END; z--) {
-    for (let x = -2; x <= 2; x++) {
-      const r = noise(x, z);
-      if (r < 0.12) b.set(x, 0, z, "minecraft:mossy_stone_bricks");
-      else if (r < 0.22) b.set(x, 0, z, "minecraft:cracked_stone_bricks");
-      else if (r < 0.27) b.set(x, 0, z, "minecraft:andesite");
+  // Outer walls (white), a glass front between white frames.
+  b.fill(-HALF, 1, BACK, HALF, ROOF - 1, BACK, WHITE);
+  b.fill(-HALF, 1, FRONT, -HALF, ROOF - 1, BACK, WHITE);
+  b.fill(HALF, 1, FRONT, HALF, ROOF - 1, BACK, WHITE);
+  b.fill(-HALF + 1, 1, FRONT, HALF - 1, ROOF - 1, FRONT, GLASS);
+  for (const x of [-STOREFRONT, STOREFRONT, -ROOMFRONT - 3, ROOMFRONT + 3]) b.fill(x, 1, FRONT, x, ROOF - 1, FRONT, WHITE);
+  b.fill(-HALF, UPPER, FRONT, HALF, UPPER, FRONT, WHITE);
+  // Side windows along the upper floor.
+  for (const x of [-HALF, HALF]) {
+    for (let i = 0; i < 6; i++) {
+      const u = unitZ(i);
+      b.fill(x, UPPER + 2, u.inner1 - 1, x, UPPER + 4, u.inner2 + 1, PANE);
     }
   }
+  // The entrance.
+  b.fill(-2, 1, FRONT, 2, 3, FRONT, "minecraft:air");
   yield;
-  // The arch.
-  for (const x of [-4, 4]) b.fill(x, 1, -9, x, 5, -9, "minecraft:stone_bricks");
-  b.fill(-4, 6, -9, 4, 6, -9, "minecraft:stone_bricks");
-  b.fill(-3, 7, -9, 3, 7, -9, "minecraft:stone_brick_slab", BOTTOM);
-  for (const x of [-2, 2]) b.set(x, 5, -9, "minecraft:lantern", { hanging: true });
-  b.set(0, 7, -9, "minecraft:chiseled_stone_bricks");
-  b.sign(0, 8, -9, "§lMarket Street§r\nshops & skills\n§7Defend the Core", "south");
-  // Lamp posts in the gaps between the shops.
-  for (let slot = 0; slot < 4; slot++) {
-    const z = STALL.first - slot * STALL.pitch + 2;
-    for (const x of [-3, 3]) {
-      b.fill(x, 1, z, x, 3, z, FENCE);
-      b.set(x, 4, z, "minecraft:lantern", { hanging: false });
-    }
+  // Roof with a skylight over the atrium; lights in the roof.
+  b.fill(-HALF, ROOF, FRONT, HALF, ROOF, BACK, WHITE);
+  b.fill(-ATRIUM, ROOF, FRONT + 1, ATRIUM, ROOF, BACK - 1, GLASS);
+  for (let i = 0; i < 6; i++) {
+    const z = unitZ(i).door[0];
+    for (const x of [-10, 10, -5, 5]) b.set(x, ROOF, z, LIGHT);
   }
   yield;
 }
 
-function* stall(b, kind, side, slot) {
-  const t = THEMES[kind];
-  const f = stallFrame(side, slot);
-  const fill = (u1, y1, v1, u2, y2, v2, ids, states) => b.fill(f.x(u1), y1, f.z(v1), f.x(u2), y2, f.z(v2), ids, states);
-  const set = (u, y, v, ids, states) => b.set(f.x(u), y, f.z(v), ids, states);
-  const last = STALL.depth - 1;
-  const end = STALL.length - 1;
-
-  fill(0, 0, 0, last, 0, end, t.floor);
-  fill(last, 1, 0, last, 4, end, t.wall); // back
-  fill(0, 1, 0, last, 4, 0, t.wall); // sides
-  fill(0, 1, end, last, 4, end, t.wall);
-  for (const [u, v] of [[0, 0], [0, end], [last, 0], [last, end], [last, 4]]) fill(u, 1, v, u, 4, v, t.log);
-  // Windows.
-  fill(last, 2, 3, last, 3, 5, "minecraft:glass_pane");
-  fill(3, 2, 0, 4, 3, 0, "minecraft:glass_pane");
-  fill(3, 2, end, 4, 3, end, "minecraft:glass_pane");
-  // Open front: a counter either side of the door, a beam above.
-  fill(0, 1, 1, 0, 1, 3, t.counter);
-  fill(0, 1, 5, 0, 1, 7, t.counter);
-  fill(0, 4, 1, 0, 4, end - 1, t.planks);
+function* upperFloor(b) {
+  // Floor over the shops and a bridge across the back of the atrium.
+  for (const side of [-1, 1]) b.fill(side * STOREFRONT, UPPER, FRONT + 1, side * (HALF - 1), UPPER, BACK + 1, "minecraft:smooth_quartz");
+  b.fill(-ATRIUM, UPPER, -38, ATRIUM, UPPER, BACK + 1, "minecraft:smooth_quartz");
+  // Glass railings along the balconies and the bridge (a gap for the stairs).
+  for (const side of [-1, 1]) b.fill(side * STOREFRONT, UPPER + 1, FRONT + 1, side * STOREFRONT, UPPER + 1, -38, PANE);
+  b.fill(-ATRIUM, UPPER + 1, -38, -2, UPPER + 1, -38, PANE);
+  b.fill(2, UPPER + 1, -38, ATRIUM, UPPER + 1, -38, PANE);
   yield;
-  // Stepped roof with an overhang, and a striped awning over the street.
-  fill(-1, 5, -1, last + 1, 5, end + 1, t.slab, BOTTOM);
-  fill(1, 5, 0, last - 1, 5, end, t.planks);
-  fill(2, 6, 0, last - 2, 6, end, t.slab, BOTTOM);
-  fill(3, 6, 1, last - 3, 6, end - 1, t.planks);
-  fill(3, 7, 1, last - 3, 7, end - 1, t.slab, BOTTOM);
-  for (let v = 0; v <= end; v++) set(-1, 4, v, t.awning[v % 2]);
-  // Inside: a lantern, the trade's workstations along the back wall.
-  set(3, 4, 4, "minecraft:lantern", { hanging: true });
-  t.decor.forEach((stack, i) => {
-    const v = 1 + i + (i >= 3 ? 1 : 0); // leave the middle (v 4) for the window post
-    stack.forEach((id, h) => set(last - 1, 1 + h, v, id));
-  });
-  b.sign(f.x(0), 2, f.z(6), `§l${t.sign}§r\n${t.sub}`, side > 0 ? "west" : "east");
+  // Twelve rooms: glass fronts with a door, white walls between.
+  for (const side of [-1, 1]) {
+    b.fill(side * ROOMFRONT, UPPER + 1, FRONT + 1, side * ROOMFRONT, ROOF - 1, BACK + 1, PANE);
+    for (const z of DIVIDERS) b.fill(side * ROOMFRONT, UPPER + 1, z, side * (HALF - 1), ROOF - 1, z, WHITE);
+    for (let i = 0; i < 6; i++) {
+      const u = unitZ(i);
+      b.fill(side * ROOMFRONT, UPPER + 1, u.door[0], side * ROOMFRONT, UPPER + 2, u.door[1], "minecraft:air");
+    }
+  }
+  yield;
+  // The staircase up the back of the atrium (six steps to the bridge).
+  const facing = STAIR_DIR[b.dir("north")];
+  for (let k = 1; k <= 6; k++) {
+    const z = -31 - k;
+    if (k > 1) b.fill(-1, 1, z, 1, k - 1, z, "minecraft:smooth_quartz");
+    b.fill(-1, k, z, 1, k, z, "minecraft:quartz_stairs", { weirdo_direction: facing, upside_down_bit: false });
+  }
   yield;
 }
 
-function* plaza(b) {
-  const { z1, z2, half } = PLAZA;
-  b.fill(-half, 0, z1, half, 0, z2, "minecraft:polished_andesite");
-  b.fill(-half + 1, 0, z1 - 1, half - 1, 0, z2 + 1, "minecraft:stone_bricks");
-  b.fill(-half + 2, 0, z1 - 2, half - 2, 0, z2 + 2, "minecraft:polished_andesite");
+function* unit(b, kind, side, i) {
+  const t = THEMES[kind ?? "soon"];
+  const u = unitZ(i);
+  const x = (n) => side * n;
+  // Floor, walls between units, the feature back wall.
+  b.fill(x(STOREFRONT + 1), 0, u.inner1, x(ACCENT), 0, u.inner2, t.floor);
+  b.fill(x(STOREFRONT), 1, u.front, x(HALF - 1), UPPER - 1, u.front, WHITE);
+  b.fill(x(STOREFRONT), 1, u.back, x(HALF - 1), UPPER - 1, u.back, WHITE);
+  b.fill(x(ACCENT), 1, u.inner1, x(ACCENT), UPPER - 1, u.inner2, t.accent);
+  // Storefront: glass with a door, the shop's colour band above.
+  b.fill(x(STOREFRONT), 1, u.inner1, x(STOREFRONT), UPPER - 2, u.inner2, PANE);
+  b.fill(x(STOREFRONT), 1, u.door[0], x(STOREFRONT), 2, u.door[1], "minecraft:air");
+  b.fill(x(STOREFRONT), UPPER - 1, u.inner1, x(STOREFRONT), UPPER - 1, u.inner2, t.band);
+  // A light in the ceiling; the trade's workstations along the back wall.
+  b.set(x(9), UPPER, u.door[0], LIGHT);
+  t.decor.forEach((stack, n) => stack.forEach((id, h) => b.set(x(ACCENT - 1), 1 + h, u.inner1 - n, id)));
   yield;
-  // Fountain: a walled basin, a pillar with a lantern on top.
-  const cz = Math.round((z1 + z2) / 2);
-  b.fill(-3, 0, cz + 3, 3, 0, cz - 3, "minecraft:stone_bricks");
-  b.fill(-3, 1, cz + 3, 3, 1, cz - 3, "minecraft:stone_brick_wall");
-  b.fill(-2, 1, cz + 2, 2, 1, cz - 2, "minecraft:water");
-  b.fill(0, 1, cz, 0, 3, cz, "minecraft:chiseled_stone_bricks");
-  b.set(0, 4, cz, "minecraft:lantern", { hanging: false });
-  // Planters and lamp posts at the corners, a bell at the head.
-  for (const x of [-half + 2, half - 2]) {
-    for (const z of [z1 - 2, z2 + 2]) {
+}
+
+function* atrium(b) {
+  // Planters down the atrium, the leaderboard kiosks by the entrance.
+  for (const z of [-20, -30]) {
+    for (const x of [-ATRIUM + 1, ATRIUM - 1]) {
       b.set(x, 0, z, "minecraft:moss_block");
       b.set(x, 1, z, ["minecraft:flowering_azalea", "minecraft:azalea"]);
     }
-    for (const z of [z1 - 5, z2 + 5]) {
-      b.fill(x, 1, z, x, 3, z, FENCE);
-      b.set(x, 4, z, "minecraft:lantern", { hanging: false });
-    }
   }
-  b.set(0, 1, z2 + 1, "minecraft:bell");
-  b.sign(2, 1, z2 + 1, "§lThe Plaza§r\nMarket Street", "south");
+  for (const x of [-2, 2]) b.set(x, 1, BOARD_Z, "minecraft:polished_blackstone");
   yield;
+}
+
+// ---------------------------------------------------------------- labels
+
+const BOARD_Z = -13;
+
+/** Floating text: one dm:label per key, replaced on every placement. */
+function placeLabels(b) {
+  const dim = b.dim;
+  for (const old of dim.getEntities({ type: "dm:label" })) {
+    if (typeof old.getDynamicProperty("dtc:label") === "string") old.remove();
+  }
+  const put = (lx, y, lz, key, text) => {
+    const at = b.at(lx, y, lz);
+    const label = dim.spawnEntity("dm:label", { x: at.x + 0.5, y: at.y, z: at.z + 0.5 });
+    label.setDynamicProperty("dtc:label", key);
+    label.nameTag = text;
+  };
+  for (const [kind, side, i] of UNITS) {
+    const t = THEMES[kind ?? "soon"];
+    put(side * (STOREFRONT - 1), 3, unitZ(i).door[0], `shop_${side}_${i}`, `§l${kind ? "§b" : "§7"}${t.name}${t.sub ? `\n§r§7${t.sub}` : ""}`);
+  }
+  put(0, 4, FRONT + 1, "mall_title", "§l§bDEFEND THE CORE MALL\n§r§7shops on the ground floor");
+  put(0, UPPER + 2, -40, "upper", "§l§7LEVEL 2\n§r§7coming soon");
+  put(-2, 2, BOARD_Z, "board_kills", "§c§lTOP KILLERS");
+  put(2, 2, BOARD_Z, "board_earned", "§e§lTOP EARNERS");
 }
 
 // ---------------------------------------------------------------- loading
 
-/** Runs `fn` once the market's chunks are loaded, holding them with a
+/** Runs `fn` once the mall's chunks are loaded, holding them with a
  * ticking area meanwhile. */
 function whileLoaded(b, label, fn) {
   const dim = b.dim;
   const corners = [
-    b.at(-SITE.half, 0, 0), b.at(SITE.half, 0, 0),
-    b.at(-SITE.half, 0, SITE.z2), b.at(SITE.half, 0, SITE.z2),
-    b.at(0, 0, Math.round(SITE.z2 / 2)),
+    b.at(-CLEAR.half, 0, 0), b.at(CLEAR.half, 0, 0),
+    b.at(-CLEAR.half, 0, CLEAR.z2), b.at(CLEAR.half, 0, CLEAR.z2),
+    b.at(0, 0, Math.round(CLEAR.z2 / 2)),
   ];
   const loaded = () => corners.every((c) => dim.isChunkLoaded(c));
-  const mid = b.at(0, 0, Math.round(SITE.z2 / 2));
+  const mid = b.at(0, 0, Math.round(CLEAR.z2 / 2));
   let added = false;
   if (!loaded()) {
     dim.runCommand(`tickingarea remove ${AREA}`);
@@ -282,7 +317,7 @@ function whileLoaded(b, label, fn) {
       if (system.currentTick - started > 20 * 60) {
         system.clearRun(wait);
         if (added) dim.runCommand(`tickingarea remove ${AREA}`);
-        emit(`${label}_done`, { ok: false, error: "Market Street's chunks didn't load" });
+        emit(`${label}_done`, { ok: false, error: "the mall's chunks didn't load" });
       }
       return;
     }
@@ -294,54 +329,48 @@ function whileLoaded(b, label, fn) {
   }, 10);
 }
 
-// The Pawnbroker keeps a stand on the plaza, between the street and the
-// fountain: a counter of barrels and a sign. Placed with the vendors, so a
-// market built before the Pawnbroker existed gets the stand too.
-const PAWN = { x: 0, z: PLAZA.z1 - 2 };
-
-function pawnStand(b) {
-  for (const x of [-2, 2]) b.set(PAWN.x + x, 1, PAWN.z - 1, "minecraft:barrel", { facing_direction: 1 });
-  b.set(PAWN.x + 2, 2, PAWN.z - 1, "minecraft:lantern", { hanging: false });
-  b.sign(PAWN.x - 2, 2, PAWN.z - 1, "§lPawnbroker§r\nbuys tower loot\n§7for coins", "south");
-}
-
 function placeVendors(b) {
-  for (const [kind, side, slot] of STALLS) spawnVendor(vendorSpot(b, side, slot), kind);
-  pawnStand(b);
-  const at = b.at(PAWN.x, 1, PAWN.z - 1);
-  spawnVendor({ x: at.x + 0.5, y: at.y, z: at.z + 0.5 }, "pawnbroker");
+  for (const [kind, side, i] of UNITS) {
+    if (!kind) continue;
+    const at = b.at(side * 9, 1, unitZ(i).door[0]);
+    spawnVendor({ x: at.x + 0.5, y: at.y, z: at.z + 0.5 }, kind);
+  }
+  placeLabels(b);
 }
 
-/** Puts every vendor back at their counter. */
+/** Puts every vendor (and the floating signs and boards) back. */
 export function respawnMarketVendors() {
   const b = depotBuilder();
   whileLoaded(b, "vendors", (release) => {
     try {
       placeVendors(b);
-      emit("vendors_done", { ok: true, where: "market" });
+      emit("vendors_done", { ok: true, where: "mall" });
     } catch (e) {
       emit("vendors_done", { ok: false, error: String(e) });
     }
     release();
   });
-  return { pending: true, where: "market" };
+  return { pending: true, where: "mall" };
 }
 
-/** Builds (or rebuilds) Market Street behind the depot. Async: emits
- * market_done when finished. */
+/** Builds (or rebuilds) the mall behind the depot, clearing Market Street
+ * if it stood there. Async: emits market_done when finished. */
 export function buildMarket() {
   const b = depotBuilder();
   whileLoaded(b, "market", (release) => {
     system.runJob(
       (function* () {
         try {
+          yield* waterproof(b);
           yield* clearSite(b);
-          yield* street(b);
-          for (const [kind, side, slot] of STALLS) yield* stall(b, kind, side, slot);
-          yield* plaza(b);
+          yield* shell(b);
+          for (const [kind, side, i] of UNITS) yield* unit(b, kind, side, i);
+          yield* upperFloor(b);
+          yield* atrium(b);
+          yield* waterproof(b);
           placeVendors(b);
           world.setDynamicProperty(MARKET_PROP, true);
-          emit("market_done", { ok: true, shops: STALLS.length, errors: [...b.errors] });
+          emit("market_done", { ok: true, shops: UNITS.length, errors: [...b.errors] });
         } catch (e) {
           emit("market_done", { ok: false, error: String(e), errors: [...b.errors] });
         }
@@ -349,6 +378,5 @@ export function buildMarket() {
       })()
     );
   });
-  const entrance = b.at(0, 1, STREET_START);
-  return { pending: true, entrance, plaza: b.at(0, 1, Math.round((PLAZA.z1 + PLAZA.z2) / 2)) };
+  return { pending: true, entrance: b.at(0, 1, FRONT), atrium: b.at(0, 1, -25) };
 }

@@ -40,6 +40,7 @@ entity.dm:turret_flak.name=Flak Turret
 entity.dm:turret_frost.name=Frost Turret
 entity.dm:vendor.name=Vendor
 action.interact.dtc_turret=Repair / Upgrade
+entity.dm:label.name=Label
 item.dm:arrow_turret=Arrow Turret
 item.dm:flak_turret=Flak Turret
 item.dm:frost_turret=Frost Turret

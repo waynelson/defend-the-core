@@ -20,6 +20,7 @@ import { newGameForAll, startStats } from "./stats.js";
 import { blockPrices } from "./mason.js";
 import { buildMarket } from "./market.js";
 import { setPerf, stress } from "./perf.js";
+import { boardsStatus, recordKill, startBoards } from "./boards.js";
 import { raiseTower, removeTower, startTowers, towerStatus } from "./tower.js";
 import { startRain } from "./rewards.js";
 import { SHOP, priceOf, startShop } from "./shop.js";
@@ -268,6 +269,10 @@ const handlers = {
   depot_restock() {
     return restockDepot();
   },
+  // The mall's leaderboards: this game's kills and coins earned.
+  boards() {
+    return boardsStatus();
+  },
   // Tick timing and entity counts: {on, every?}; perf lines follow.
   perf(msg) {
     return setPerf(msg);
@@ -405,6 +410,7 @@ world.afterEvents.entityDie.subscribe(
     } else {
       emit("attacker_died", { mob: event.deadEntity.typeId, by: src.damagingEntity?.typeId ?? src.cause });
       const earner = bountyOwner(event.deadEntity, src.damagingEntity);
+      if (earner) recordKill(earner);
       const boss = MOBS[event.deadEntity.typeId]?.boss;
       if (boss) {
         const label = MOBS[event.deadEntity.typeId].label;
@@ -444,6 +450,7 @@ world.afterEvents.worldLoad.subscribe(() => {
   startStats();
   hooks.newGame.push(newGameForAll);
   startTowers();
+  startBoards();
   // Every cleared wave is a round survived, whoever launched it.
   hooks.waveCleared.push((waveNo) => roundEnd(waveNo));
   // Locked armour is mended (or replaced, if it broke) after every wave.
