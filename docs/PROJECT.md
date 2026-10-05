@@ -52,7 +52,9 @@ the first spike.
   restart.)
 - **Don't push the Crafty fork** to GitLab without asking (`local/nelson-next`
   was first pushed 2026-10-05 at Wayne's request; later commits stay local
-  until he asks again). Pushing the add-on to GitHub after committing
+  until he asks again). Pushing needs no setup now: a GitLab personal access
+  token (`write_repository`) is saved (see section 3), so the ask is about
+  permission, not credentials. Pushing the add-on to GitHub after committing
   is routine.
 - **Report honestly what was tested.** Most features can be checked from the
   console, but anything needing a player (menus, visuals, combat feel, locked
@@ -86,7 +88,21 @@ the first spike.
   (pushed; all DM work). `local/nelson` was folded into it on 2026-10-05
   (the merge keeps nelson-next's tree, which already had that work in
   reviewed form), so it is now just an ancestor. `feature/dm-tab` is the
-  first DM tab cut, also an ancestor. Both are safe to delete.
+  first DM tab cut, also an ancestor. Both local branches were deleted on
+  2026-10-05 (fully merged).
+- **GitLab auth (saved 2026-10-05):** Wayne stored a personal access token
+  (scope `write_repository`, with an expiry; he set it up himself, so the
+  date is in his GitLab settings) in Git Credential Manager's DPAPI store
+  (`git config --global credential.credentialStore dpapi`; the default
+  `wincredman` store fails to persist on desktop-den). The username is his
+  email. Push over HTTPS; the SSH `origin` URL hangs:
+  ```
+  git -C C:\Crafty-Dev push https://gitlab.com/personal-use-group7112940/crafty-4.git local/nelson-next:local/nelson-next
+  ```
+  Set `$env:GIT_TERMINAL_PROMPT='0'` so a missing or expired token fails
+  instead of hanging. If it fails with an auth error, the token has probably
+  expired: ask Wayne to make a new one and re-save it. Never put the token in
+  a file, a command line, or this doc.
 - Two worktrees of one repo:
   - `C:\Crafty-Dev` has `local/nelson-next` checked out.
   - `C:\Crafty` is the **running service's code**, a *detached HEAD* at the
@@ -480,9 +496,11 @@ Raw results: `dist/stress_before.log`, `dist/stress.json` (not committed).
   - Spread attacks: arc spawning, wall-breaker sectors (`breaker_share`).
   - Mall control rooms (player self-admin buttons/levers), mall protection,
     obsidian x2 at the Mason.
-- **Fork** `local/nelson-next` 994c4fa9, pushed to GitLab `origin` on
-  2026-10-05 (first time). The Crafty service has been restarted, so the
-  running panel has all fork changes, including the in-game requests and
+- **Fork** `local/nelson-next` d0575df3 (README rewritten as an experimental
+  personal-use fork; ping mode selector `7b0473e9` deployed and verified
+  2026-10-05; PingTest test instances deleted), pushed to GitLab `origin`
+  2026-10-05. The Crafty service was restarted for the ping-mode deploy, so
+  the running panel has all fork changes, including the in-game requests and
   player-controls toggle.
 - **Untested in-game:** turret/mine placement after the fix; boss visuals and
   boss bars; Sapper/Demolisher visibility after the template change; the
