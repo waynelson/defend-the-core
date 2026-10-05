@@ -5,8 +5,8 @@ describes what exists, where it lives, how to change and ship it, the rules
 of the road, and what's next. **This file is authoritative**; README.md is a
 short overview that points here.
 
-Last updated: 2026-10-05. Add-on **v0.7.5** on beta (`main` is 9 commits ahead); Crafty fork
-`local/nelson-next` at 994c4fa9.
+Last updated: 2026-10-05. Add-on **v0.8.0** on beta (nothing unreleased on `main`);
+Crafty fork `local/nelson-next` at ba101d8d (local, not pushed).
 
 ---
 
@@ -70,7 +70,7 @@ the first spike.
 
 ### Add-on (`C:\defend-the-core`)
 
-- Branch `main`; releases are annotated tags `vX.Y.Z` (v0.1.0 … v0.7.5).
+- Branch `main`; releases are annotated tags `vX.Y.Z` (v0.1.0 … v0.8.0).
 - Push with the GitHub CLI's credentials (the Windows credential store
   fails to persist):
   ```
@@ -283,7 +283,7 @@ block price, repair rate, limits, prices, defenses, levels incl. starting
 SP, new game), Tuning (block damage ×, breach ×, decay, max tracked, max
 mobs alive), World, Setup (world setup, depot, Market Street).
 
-## 6. The game as implemented (v0.7.5)
+## 6. The game as implemented (v0.8.0)
 
 - **Flow:** setup → prep (timer) → wave → intermission → … → won/lost.
   Clearing the final wave wins; the core dying loses. `new_game` resets the
@@ -494,32 +494,28 @@ Raw results: `dist/stress_before.log`, `dist/stress.json` (not committed).
 
 ## 10. Current state
 
-- **Add-on v0.7.5** on dev and beta (tags v0.7.2 … v0.7.5 today):
+- **Add-on v0.8.0** on beta (tags v0.7.2 … v0.8.0):
   - 0.7.2: world rules on load, turret arrow cleanup, per-player HUD, 1,000
     coins / 2 SP start, max mobs alive, `dm:perf`, `dm:stress`.
   - 0.7.3: turrets and mines placeable (`dtc:placer`), instant level-ups.
   - 0.7.4: `timer_ended` in status (armed waves across panel restarts).
   - 0.7.5: bosses, private coins, big waves, block damage ×8, Pawnbroker,
     visible Sappers/Demolishers.
-- **Unreleased on `main` (9 commits past v0.7.5, untagged, not on beta;
-  dev deploy state not recorded here):**
-  - Core-to-spawn/depot distance 80 blocks; 4 spawn points auto-selected;
-    new game resets every player even if one fails.
-  - The mall replaces Market Street; leaderboards; blazes fly in.
-  - Ground mobs climb terrain and obstacles (`climb_height`).
-  - Spread attacks: arc spawning, wall-breaker sectors (`breaker_share`).
-  - Mall control rooms (player self-admin buttons/levers), mall protection,
-    obsidian x2 at the Mason.
-  - Tower rewrite (this branch): floors 4× the area, up to 12 floors, nine
-    floor kinds with hazards (see section 6). **Needs the fork's `tower`
-    action schema raised to `floors` max 12** (`app/classes/dm/protocol.py`,
-    plus a test) before the DM tab can ask for more than the old limit.
-- **Fork** `local/nelson-next` d0575df3 (README rewritten as an experimental
+  - 0.8.0 (also ships the 9 commits that were unreleased after 0.7.5, none
+    tested in-game): core-to-spawn/depot distance 80 blocks with 4
+    auto-selected spawn points; the mall replaces Market Street (leaderboards,
+    control rooms, mall protection, obsidian x2 at the Mason); blazes fly in;
+    ground mobs climb terrain (`climb_height`); spread attacks (arc spawning,
+    wall-breaker sectors, `breaker_share`); tower rewrite (17×17, 2–12
+    floors, nine floor kinds with script traps, built as a job; see section
+    6). The fork's `tower` schema allows `floors` 2–12.
+- **Fork** `local/nelson-next` ba101d8d: tower `floors` max 12 in the schema
+  and the tab input (local only; the running panel needs a restart by Wayne to
+  pick it up). Before that: d0575df3 (README rewritten as an experimental
   personal-use fork; ping mode selector `7b0473e9` deployed and verified
   2026-10-05; PingTest test instances deleted), pushed to GitLab `origin`
-  2026-10-05. The Crafty service was restarted for the ping-mode deploy, so
-  the running panel has all fork changes, including the in-game requests and
-  player-controls toggle.
+  2026-10-05.
+- **Unreleased on `main`:** nothing.
 - **Untested in-game:** turret/mine placement after the fix; boss visuals and
   boss bars; Sapper/Demolisher visibility after the template change; the
   Pawnbroker menu; the coins-on-HUD line; every vendor menu (Engineer,
