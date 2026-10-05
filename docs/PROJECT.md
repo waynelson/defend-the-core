@@ -238,7 +238,7 @@ invisible, but suspect).
 | `boards.js` | Per-game leaderboards (kills, coins earned) shown on `dm:label` floating text |
 | `controls.js` | The mall's player self-admin buttons and levers (auto DM on/off, difficulty presets, pause, next wave, supply drop, fix mall, restock, vendors, tower, daytime, two-press reset map → panel `request`) |
 | `sectors.js` | Wall-breakers: sector waypoints just outside the defences, breaker assignment and release |
-| `tower.js` | Procedural dungeon towers with guards and loot near the spawn (avoids Market Street) |
+| `tower.js` | Procedural dungeon towers near the spawn (avoids the mall and depot): 17×17, 2–12 floors, each a different room kind with hazards (`KINDS`), guards, loot; built as a job; `trapTick` drives arrow slits, mine plates, crumbling tiles and gas/flame vents |
 | `rewards.js` | Supply-drop item rain, `lootStack` (tower and drop loot pool) |
 | `players.js` | Player snapshots for the DM tab |
 | `perf.js` | `dm:perf` tick timing sampler, `dm:stress` test helper |
@@ -372,6 +372,20 @@ mobs alive), World, Setup (world setup, depot, Market Street).
   (`repair_rate` 0.5 coins/HP), upgrade (1×/1.5× the turret's price), pick
   up (owner, full HP). Limits: `turret_limit` 3 / `mine_limit` 10 per player
   plus Engineering. Mines: blast (40), frost (30).
+- **Towers** (auto DM: every 2nd intermission; mall lever; DM tab): 17×17
+  outside, 15×15 floors, floors 6 high, 2–12 floors (default 3 + difficulty/2
+  + 0–2, so about 4–6 early and 8–10 at difficulty 10; capped by the build
+  limit). The ladder up is in the opposite corner from the way in, so every
+  floor is crossed. Floor 0 is gentle, the top is always the **throne**
+  (Captain on a dais, archers on ledges, best chest); in between each floor is
+  a different kind, deadlier higher up: **barracks**, **nest** (webs and
+  bookshelf aisles), **frozen** (ice and magma), **gauntlet** (arrow slits in
+  the side walls), **minefield** (pressure plates that explode a second
+  later), **toxic** (poison vents over soul sand), **crumble** (cracked floor
+  that drops under you), **furnace** (lava basins, magma, flame vents),
+  **maze** (chest in the deepest dead end). Script traps never break blocks
+  (explosions are `breaksBlocks: false`). One chest per floor; guards ≤ 6 per
+  floor.
 - **Free depot:** cobblestone, dirt, torches, workshop, enchanting kit only.
 
 ## 7. Tools and everyday commands
@@ -455,7 +469,7 @@ mc-defend; default is dev.
   (`ends_tick`) survive a deploy.
 - A depot rebuild must reuse the stored floor y (a survey reads the roof as
   ground) and demolish before relocating.
-- Tower sites skip the Market Street footprint.
+- Tower sites skip the mall footprint and the depot. A tower is built over several ticks (`system.runJob`); `raiseTower` returns `pending` and `tower_raised` is emitted at the end; raising or removing during the build throws. The `dtc:tower` record keeps the trap list (kept out of `status`, which only reports its length), so keep it small (< 32 KB). Towers raised by older versions (9×9, no `radius`/`low`/`porch`) are still removed correctly.
 - Aborting a wave (incl. `kill_all`) removes its mobs before `kill_all`
   counts, so `removed` can read 0.
 - CRLF warnings on commit are harmless.
@@ -496,6 +510,10 @@ Raw results: `dist/stress_before.log`, `dist/stress.json` (not committed).
   - Spread attacks: arc spawning, wall-breaker sectors (`breaker_share`).
   - Mall control rooms (player self-admin buttons/levers), mall protection,
     obsidian x2 at the Mason.
+  - Tower rewrite (this branch): floors 4× the area, up to 12 floors, nine
+    floor kinds with hazards (see section 6). **Needs the fork's `tower`
+    action schema raised to `floors` max 12** (`app/classes/dm/protocol.py`,
+    plus a test) before the DM tab can ask for more than the old limit.
 - **Fork** `local/nelson-next` d0575df3 (README rewritten as an experimental
   personal-use fork; ping mode selector `7b0473e9` deployed and verified
   2026-10-05; PingTest test instances deleted), pushed to GitLab `origin`
@@ -510,7 +528,10 @@ Raw results: `dist/stress_before.log`, `dist/stress.json` (not committed).
   damage/health/regen benefits; the mall up close and its control rooms
   (incl. two-press reset map); mall protection; spread attacks and
   wall-breaker sectors with real players; terrain climbing on beta terrain;
-  enchantment names (density, impaling); balance with block damage x8.
+  enchantment names (density, impaling); balance with block damage x8; the
+  new towers (checked only against a mock world: layout, ladders, paths,
+  chests, trap logic): block ids and states, arrow aim and damage, plate and
+  vent timing, crumble feel, guard counts and tick cost of a 12-floor tower.
 
 ## 11. Backlog
 

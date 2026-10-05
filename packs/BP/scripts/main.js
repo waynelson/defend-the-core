@@ -138,8 +138,9 @@ const handlers = {
     resetGame();
     return gameStatus();
   },
-  // Towers: {floors?, difficulty?} raises one near the spawn (replacing the
-  // last); tower_remove takes it down.
+  // Towers: {floors?: 2..12, difficulty?: 1..10} raises one near the spawn
+  // (replacing the last; built over several ticks, `tower_raised` marks the
+  // end); tower_remove takes it down.
   tower(msg) {
     return raiseTower(msg);
   },
