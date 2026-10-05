@@ -82,8 +82,11 @@ the first spike.
 
 - Remotes: `origin` = gitlab.com/personal-use-group7112940/crafty-4,
   `upstream` = gitlab.com/crafty-controller/crafty-4.
-- Branches: `local/nelson` (older, tracks origin), `feature/dm-tab` (first DM
-  tab cut), **`local/nelson-next`** (all current DM work; never pushed).
+- Branches: **`local/nelson-next`** is the trunk and GitLab's default branch
+  (pushed; all DM work). `local/nelson` was folded into it on 2026-10-05
+  (the merge keeps nelson-next's tree, which already had that work in
+  reviewed form), so it is now just an ancestor. `feature/dm-tab` is the
+  first DM tab cut, also an ancestor. Both are safe to delete.
 - Two worktrees of one repo:
   - `C:\Crafty-Dev` has `local/nelson-next` checked out.
   - `C:\Crafty` is the **running service's code**, a *detached HEAD* at the
