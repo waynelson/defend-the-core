@@ -5,8 +5,8 @@ describes what exists, where it lives, how to change and ship it, the rules
 of the road, and what's next. **This file is authoritative**; README.md is a
 short overview that points here.
 
-Last updated: 2026-10-04. Add-on **v0.7.5** on dev and beta; Crafty fork
-`local/nelson-next` at 2fbaa7f1.
+Last updated: 2026-10-05. Add-on **v0.7.5** on beta (`main` is 9 commits ahead); Crafty fork
+`local/nelson-next` at 994c4fa9.
 
 ---
 
@@ -50,8 +50,9 @@ the first spike.
   and restarting it needs admin. When a fork change needs the panel
   restarted, say so; don't try to restart it. (Armed waves now survive a
   restart.)
-- **Don't push the Crafty fork** to GitLab without asking (it has never been
-  pushed; commits stay local). Pushing the add-on to GitHub after committing
+- **Don't push the Crafty fork** to GitLab without asking (`local/nelson-next`
+  was first pushed 2026-10-05 at Wayne's request; later commits stay local
+  until he asks again). Pushing the add-on to GitHub after committing
   is routine.
 - **Report honestly what was tested.** Most features can be checked from the
   console, but anything needing a player (menus, visuals, combat feel, locked
@@ -467,18 +468,28 @@ Raw results: `dist/stress_before.log`, `dist/stress.json` (not committed).
   - 0.7.4: `timer_ended` in status (armed waves across panel restarts).
   - 0.7.5: bosses, private coins, big waves, block damage ×8, Pawnbroker,
     visible Sappers/Demolishers.
-- **Fork** `local/nelson-next` 2fbaa7f1. The running panel only has fork
-  changes after Wayne restarts the Crafty service; as of the 0.7.5 push he
-  had not restarted since the armed-wave fix (f029ee11), so the Bosses card,
-  spectator button, block damage field, big-wave limits and saved armed
-  waves are pending that restart.
+- **Unreleased on `main` (9 commits past v0.7.5, untagged, not on beta;
+  dev deploy state not recorded here):**
+  - Core-to-spawn/depot distance 80 blocks; 4 spawn points auto-selected;
+    new game resets every player even if one fails.
+  - The mall replaces Market Street; leaderboards; blazes fly in.
+  - Ground mobs climb terrain and obstacles (`climb_height`).
+  - Spread attacks: arc spawning, wall-breaker sectors (`breaker_share`).
+  - Mall control rooms (player self-admin buttons/levers), mall protection,
+    obsidian x2 at the Mason.
+- **Fork** `local/nelson-next` 994c4fa9, pushed to GitLab `origin` on
+  2026-10-05 (first time). The Crafty service has been restarted, so the
+  running panel has all fork changes, including the in-game requests and
+  player-controls toggle.
 - **Untested in-game:** turret/mine placement after the fix; boss visuals and
   boss bars; Sapper/Demolisher visibility after the template change; the
   Pawnbroker menu; the coins-on-HUD line; every vendor menu (Engineer,
   Mason, Provisioner, skill vendors, Armorer upgrades); turret repair /
   upgrade / pick-up menu; locked armour (incl. the hotbar-swap shortcut);
-  damage/health/regen benefits; Market Street up close; enchantment names
-  (density, impaling); balance with block damage ×8.
+  damage/health/regen benefits; the mall up close and its control rooms
+  (incl. two-press reset map); mall protection; spread attacks and
+  wall-breaker sectors with real players; terrain climbing on beta terrain;
+  enchantment names (density, impaling); balance with block damage x8.
 
 ## 11. Backlog
 
