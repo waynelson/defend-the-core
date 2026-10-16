@@ -266,6 +266,7 @@ invisible, but suspect).
 | `app/classes/dm/log_parser.py`, `session.py` | Parse `[DM]` lines; per-server state and event feed |
 | `app/classes/dm/world_map.py`, `world_snapshot.py` | Pure-Python LevelDB + Bedrock chunk reader; top-down map renders from a safe world copy (`save hold/query/resume`) |
 | `app/classes/controllers/dm_controller.py` | Sessions, sending, armed waves (saved, resumed), map refresh, server stats |
+| `app/classes/controllers/map_controller.py`, `js/shared/map.js` | **Map tab** (any Bedrock server, local or remote): `copy_world` under save hold, then uNmINeD's `unmined-cli` renders a web map on the hub (`app/config/unmined/`). CLI lives at `F:\tools\unmined-cli` (setting `unmined_cli_path`; not bundled because its license forbids redistribution; webp tiles because the dev build's JPEG encoder crashes) |
 | `app/classes/web/routes/api/servers/server/dm.py` | The DM API route (needs the Commands permission) |
 | `app/classes/web/routes/api/crafty/remote_nodes/index.py` | Remote-server DM handler |
 | `app/classes/remote_nodes/node_client.py` | Pinned-cert node client (`download` used by the map) |
