@@ -23,8 +23,8 @@ Two deliverables:
 
 | Part | Where | What |
 | --- | --- | --- |
-| Bedrock add-on | `C:\defend-the-core`, public at github.com/waynelson/defend-the-core | Behavior pack (entities, items, Script API code), resource pack, chat-bridge pack |
-| DM tab | Wayne's Crafty fork, `C:\Crafty` / `C:\Crafty-Dev`, branch `local/nelson-next` | Panel UI, API, protocol validation, armed waves, world map, remote-node support |
+| Bedrock add-on | `F:\defend-the-core`, public at github.com/waynelson/defend-the-core | Behavior pack (entities, items, Script API code), resource pack, chat-bridge pack |
+| DM tab | Wayne's Crafty fork, `F:\Crafty` / `F:\Crafty-Dev`, branch `local/nelson-next` | Panel UI, API, protocol validation, armed waves, world map, remote-node support |
 
 The original design spec ("Defend the Core — Bedrock Add-on & Crafty Plus DM
 Plugin Spec") was uploaded in the first chat session and is **not in either
@@ -68,7 +68,7 @@ the first spike.
 
 ## 3. Repos, branches and commit flow
 
-### Add-on (`C:\defend-the-core`)
+### Add-on (`F:\defend-the-core`)
 
 - Branch `main`; releases are annotated tags `vX.Y.Z` (v0.1.0 … v0.8.0).
 - Push with the GitHub CLI's credentials (the Windows credential store
@@ -97,41 +97,41 @@ the first spike.
   `wincredman` store fails to persist on desktop-den). The username is his
   email. Push over HTTPS; the SSH `origin` URL hangs:
   ```
-  git -C C:\Crafty-Dev push https://gitlab.com/personal-use-group7112940/crafty-4.git local/nelson-next:local/nelson-next
+  git -C F:\Crafty-Dev push https://gitlab.com/personal-use-group7112940/crafty-4.git local/nelson-next:local/nelson-next
   ```
   Set `$env:GIT_TERMINAL_PROMPT='0'` so a missing or expired token fails
   instead of hanging. If it fails with an auth error, the token has probably
   expired: ask Wayne to make a new one and re-save it. Never put the token in
   a file, a command line, or this doc.
 - Two worktrees of one repo:
-  - `C:\Crafty-Dev` has `local/nelson-next` checked out.
-  - `C:\Crafty` is the **running service's code**, a *detached HEAD* at the
+  - `F:\Crafty-Dev` has `local/nelson-next` checked out.
+  - `F:\Crafty` is the **running service's code**, a *detached HEAD* at the
     same commit.
 - **Commit flow** (keeps both in step):
   ```
-  cd C:\Crafty            # edit and test here
+  cd F:\Crafty            # edit and test here
   git add <files> && git commit
   C=$(git rev-parse HEAD)
-  cd C:\Crafty-Dev && git merge --ff-only $C
-  cd C:\Crafty && git switch --detach local/nelson-next
+  cd F:\Crafty-Dev && git merge --ff-only $C
+  cd F:\Crafty && git switch --detach local/nelson-next
   ```
-- Hub tests: `C:\Crafty\.venv\Scripts\python.exe -m pytest -q`
+- Hub tests: `F:\Crafty\.venv\Scripts\python.exe -m pytest -q`
   (whole suite ≈ 550 tests, ~1 min; DM only: `tests/classes/dm`, 93 tests).
-- Ignore the untracked `crafty.exe` / `crafty_updater.exe` in `C:\Crafty`.
+- Ignore the untracked `crafty.exe` / `crafty_updater.exe` in `F:\Crafty`.
 
 ## 4. Environments
 
 | | Hub | mc-testing (dev) | mc-defend (beta) |
 | --- | --- | --- | --- |
-| Machine | This Windows PC, Crafty service from `C:\Crafty` | Linux node, Crafty at `/opt/crafty` | Linux node, Crafty at `/opt/crafty` |
+| Machine | This Windows PC, Crafty service from `F:\Crafty` | Linux node, Crafty at `/opt/crafty` | Linux node, Crafty at `/opt/crafty` |
 | Hardware | | 2 cores @ 3.5 GHz, 1.3 GB RAM | 2 cores, 1.4 GB RAM |
 | Crafty server id | | `53b99c65-fc31-4c5e-9434-c806c4db0aa0` | `8c0e5b50-d3fa-444c-87df-62e2995b5ba3` |
 | BDS | | 1.26.52 | 1.26.52 |
 
 - The hub reaches nodes through `NodeClient` with a certificate-pinned API
   token. The dev tools (`tools/node.py`) read the token from the hub DB
-  (`C:\crafty\app\config\db\crafty.sqlite`) and skip certificate checks.
-- Hub logs: `C:\Crafty\logs\` (`audit.log` records every DM action;
+  (`F:\crafty\app\config\db\crafty.sqlite`) and skip certificate checks.
+- Hub logs: `F:\Crafty\logs\` (`audit.log` records every DM action;
   `commander.log` shows panel restarts).
 - Both servers need `content-log-console-output-enabled=true` and
   `content-log-level=info` in `server.properties` (that's how `[DM]` lines
@@ -188,7 +188,7 @@ DM tab (browser) ──HTTPS──> hub API (/api/v2/servers/<id>/dm)
   Refuses with players online unless confirmed (`force`). The old world stays
   on disk.
 - **Armed waves** ("launch when the timer ends") live in the hub: saved to
-  `C:\Crafty\app\config\dm_armed.json`, watched by a thread per server that
+  `F:\Crafty\app\config\dm_armed.json`, watched by a thread per server that
   polls the console each second, asks the add-on for `status` every 15 s,
   and launches on `timer_done`, the add-on's `timer_ended` status flag, or
   its own countdown reaching 0. Resumed after a panel restart; never dies on
@@ -390,7 +390,7 @@ mobs alive), World, Setup (world setup, depot, Market Street).
 
 ## 7. Tools and everyday commands
 
-All from `C:\defend-the-core` (Git Bash). `DTC_TARGET=beta` switches tools to
+All from `F:\defend-the-core` (Git Bash). `DTC_TARGET=beta` switches tools to
 mc-defend; default is dev.
 
 | Command | What |

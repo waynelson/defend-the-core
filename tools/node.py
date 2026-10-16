@@ -18,7 +18,7 @@ import ssl
 import sys
 import urllib.request
 
-HUB_DB = os.environ.get("CRAFTY_HUB_DB", r"C:\crafty\app\config\db\crafty.sqlite")
+HUB_DB = os.environ.get("CRAFTY_HUB_DB", r"F:\crafty\app\config\db\crafty.sqlite")
 TARGETS = {
     "dev": ("mc-testing", "53b99c65-fc31-4c5e-9434-c806c4db0aa0"),
     "beta": ("mc-defend", "8c0e5b50-d3fa-444c-87df-62e2995b5ba3"),
